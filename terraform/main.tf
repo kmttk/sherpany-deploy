@@ -41,14 +41,6 @@ resource "azurerm_role_assignment" "acr_pull" {
   scope          = azurerm_container_registry.sherpany_acr.id
 }
 
-
-provider "kubernetes" {
-  host                   = azurerm_kubernetes_cluster.sherpany_aks.kube_config.0.host
-  client_certificate     = base64decode(azurerm_kubernetes_cluster.sherpany_aks.kube_config.0.client_certificate)
-  client_key             = base64decode(azurerm_kubernetes_cluster.sherpany_aks.kube_config.0.client_key)
-  cluster_ca_certificate = base64decode(azurerm_kubernetes_cluster.sherpany_aks.kube_config.0.cluster_ca_certificate)
-}
-
 resource "kubernetes_deployment" "flask_app" {
   metadata {
     name = "flask-app"
