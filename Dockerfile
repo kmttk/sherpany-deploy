@@ -1,19 +1,18 @@
 FROM python:3.9-slim
 
-WORKDIR /source
+WORKDIR /app
 
-COPY requirements.txt .
+COPY source/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-RUN pip install --no-cache-dir -r /source/requirements.txt
-
-COPY . .
+COPY source/ .
 
 RUN groupadd -g 1000 customgroup && \
     useradd -m -u 1000 -g customgroup -s /bin/bash customuser && \
-    chown -R customuser:customgroup /source
+    chown -R customuser:customgroup /app
 
 USER customuser
 
-EXPOSE 5000
+EXPOSE 8080
 
 CMD ["python", "app.py"]
