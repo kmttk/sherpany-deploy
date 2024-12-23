@@ -55,10 +55,10 @@ jobs:
     - name: Terraform Plan
       run: |
         cd terraform
-        terraform plan -out=tfplan
+        terraform plan -out=main.tfplan
 
     - name: Terraform Apply
       if: github.ref == 'refs/heads/main'
       run: |
         cd terraform
-        terraform apply -auto-approve tfplan
+        terraform apply -auto-approve main.tfplan
