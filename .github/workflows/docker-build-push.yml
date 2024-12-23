@@ -1,9 +1,9 @@
 name: Deploy to Azure AKS
-
 on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   build-and-push:
