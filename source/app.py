@@ -1,4 +1,3 @@
-# app.py
 from flask import Flask, jsonify
 import os
 import psycopg2
@@ -29,7 +28,12 @@ def get_users():
 
 @app.route('/health')
 def health_check():
-    return jsonify({"status": "healthy"})
+    try:
+        conn = get_db_connection()
+        conn.close()
+        return jsonify({"status": "healthy"})
+    except:
+        return jsonify({"status": "unhealthy"}), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8080)
+    app.run(host='0.0.0.0', port=5000)

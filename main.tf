@@ -82,7 +82,7 @@ resource "kubernetes_deployment" "flask_app" {
         container {
           name  = "flask-app"
           image = "${azurerm_container_registry.sherpany_acr.login_server}/flask-app:latest"
-          port {
+          ports {
             container_port = 5000
           }
 
@@ -119,7 +119,6 @@ resource "kubernetes_deployment" "flask_app" {
     }
   }
 }
-
 
 resource "kubernetes_service" "flask_service" {
   metadata {
