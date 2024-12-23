@@ -1,0 +1,31 @@
+variable "azure_subscription_id" {
+  type        = string
+  sensitive   = true
+}
+
+variable "azure_client_id" {
+  type        = string
+  sensitive   = true
+}
+
+variable "azure_client_secret" {
+  type        = string
+  sensitive   = true
+}
+
+variable "azure_tenant_id" {
+  type        = string
+  sensitive   = true
+}
+
+variable "resource_group_name" {
+  default = "sherpany-rg"
+}
+
+variable "aks_name" {
+  default = "sherpany-aks"
+}
+
+variable "acr_name" {
+  default = "sherpanyacr.azurecr.io"
+}
