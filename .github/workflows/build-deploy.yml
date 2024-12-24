@@ -69,6 +69,15 @@ jobs:
             -backend-config="key=terraform.tfstate" \
             -backend-config="access_key=${{ secrets.TERRAFORM_ACCESS_KEY }}"
           terraform import azurerm_storage_container.terraform_state_container "https://sherpanyterraformstate.blob.core.windows.net/tfstate"
+      
+      - name: Terraform Plan
+        env:
+          TF_VAR_azure_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          TF_VAR_azure_client_id: ${{ secrets.AZURE_CLIENT_ID }}
+          TF_VAR_azure_client_secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          TF_VAR_azure_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+        run: terraform plan -out=tfplan
+      
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main'
         env:
