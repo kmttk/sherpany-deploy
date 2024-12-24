@@ -132,7 +132,7 @@ resource "kubernetes_deployment" "flask_app" {
 
           security_context {
             run_as_user                = 1000
-            run_as_non_root           = true
+            run_as_non_root            = true
             allow_privilege_escalation = false
           }
 
@@ -145,24 +145,6 @@ resource "kubernetes_deployment" "flask_app" {
               cpu    = "500m"
               memory = "256Mi"
             }
-          }
-
-          liveness_probe {
-            http_get {
-              path = "/health"
-              port = 5000
-            }
-            initial_delay_seconds = 15
-            period_seconds       = 20
-          }
-
-          readiness_probe {
-            http_get {
-              path = "/health"
-              port = 5000
-            }
-            initial_delay_seconds = 15
-            period_seconds       = 20
           }
         }
       }
