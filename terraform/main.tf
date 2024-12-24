@@ -21,33 +21,17 @@ resource "azurerm_storage_account" "terraform_state_storage" {
   blob_properties {
     versioning_enabled = true
   }
-
   depends_on = [azurerm_resource_group.sherpany_rg]
 }
 
-# Storage Container for Terraform State
-resource "azurerm_storage_container" "terraform_state_container" {
-  name                 = "tfstate"
-  storage_account_name = azurerm_storage_account.terraform_state_storage.name
-  container_access_type = "private"
-  depends_on           = [azurerm_storage_account.terraform_state_storage]
-}
-
+# Container Registry
 resource "azurerm_container_registry" "sherpany_acr" {
-  name                     = "sherpanyacr"
-  resource_group_name      = azurerm_resource_group.sherpany_rg.name
-  location                 = azurerm_resource_group.sherpany_rg.location
-  sku                      = "Basic"
-  admin_enabled            = false
-  tags = {
-    environment = "production"
-    project     = "sherpany"
-    owner       = "devops"
-  }
-
-  depends_on = [
-    azurerm_resource_group.sherpany_rg
-  ]
+  name                = "sherpanyacr"
+  resource_group_name = azurerm_resource_group.sherpany_rg.name
+  location           = azurerm_resource_group.sherpany_rg.location
+  sku                = "Basic"
+  admin_enabled      = false
+  depends_on         = [azurerm_resource_group.sherpany_rg]
 }
 
 # AKS Cluster
@@ -66,20 +50,15 @@ resource "azurerm_kubernetes_cluster" "sherpany_aks" {
   identity {
     type = "SystemAssigned"
   }
-
-  tags = {
-    environment = "production"
-    project     = "sherpany"
-    owner       = "devops"
-  }
+  depends_on = [azurerm_resource_group.sherpany_rg]
 }
 
-#ACR Pull Role Assignment
+# ACR Pull Role Assignment
 resource "azurerm_role_assignment" "acr_pull" {
   principal_id         = azurerm_kubernetes_cluster.sherpany_aks.kubelet_identity[0].object_id
   role_definition_name = "AcrPull"
   scope               = azurerm_container_registry.sherpany_acr.id
-  depends_on          = [azurerm_container_registry.sherpany_acr]
+  depends_on          = [azurerm_container_registry.sherpany_acr, azurerm_kubernetes_cluster.sherpany_aks]
 }
 
 # Kubernetes Namespace
@@ -100,8 +79,9 @@ resource "kubernetes_secret" "postgres_secret" {
   data = {
     DB_NAME     = "testdb"
     DB_USER     = "postgres"
-    DB_PASSWORD = "securepassword123"  # Use proper secret management in production
+    DB_PASSWORD = "securepassword123"
   }
+  depends_on = [kubernetes_namespace.sherpany]
 }
 
 # Database Init ConfigMap
@@ -114,6 +94,7 @@ resource "kubernetes_config_map" "postgres_init" {
   data = {
     "init.sql" = file("${path.module}/../source/init.sql")
   }
+  depends_on = [kubernetes_namespace.sherpany]
 }
 
 # PostgreSQL StatefulSet
@@ -200,6 +181,7 @@ resource "kubernetes_stateful_set" "postgres" {
       }
     }
   }
+  depends_on = [kubernetes_namespace.sherpany, kubernetes_secret.postgres_secret, kubernetes_config_map.postgres_init]
 }
 
 # PostgreSQL Service
@@ -219,6 +201,7 @@ resource "kubernetes_service" "postgres" {
       target_port = 5432
     }
   }
+  depends_on = [kubernetes_stateful_set.postgres]
 }
 
 # Flask App Deployment
@@ -282,12 +265,6 @@ resource "kubernetes_deployment" "flask_app" {
             value = "5432"
           }
 
-          security_context {
-            run_as_user                = 1000
-            run_as_non_root           = true
-            allow_privilege_escalation = false
-          }
-
           resources {
             limits = {
               cpu    = "500m"
@@ -297,6 +274,12 @@ resource "kubernetes_deployment" "flask_app" {
               cpu    = "250m"
               memory = "128Mi"
             }
+          }
+
+          security_context {
+            run_as_user                = 1000
+            run_as_non_root           = true
+            allow_privilege_escalation = false
           }
 
           liveness_probe {
@@ -320,6 +303,7 @@ resource "kubernetes_deployment" "flask_app" {
       }
     }
   }
+  depends_on = [kubernetes_service.postgres, kubernetes_secret.postgres_secret]
 }
 
 # Flask Service
@@ -341,6 +325,7 @@ resource "kubernetes_service" "flask_service" {
 
     type = "LoadBalancer"
   }
+  depends_on = [kubernetes_deployment.flask_app]
 }
 
 # Network Policy
@@ -387,4 +372,5 @@ resource "kubernetes_network_policy" "flask_network_policy" {
 
     policy_types = ["Ingress", "Egress"]
   }
+  depends_on = [kubernetes_deployment.flask_app, kubernetes_stateful_set.postgres]
 }
