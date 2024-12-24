@@ -90,11 +90,147 @@ resource "kubernetes_namespace" "sherpany" {
   depends_on = [azurerm_kubernetes_cluster.sherpany_aks]
 }
 
+# Database Secrets
+resource "kubernetes_secret" "postgres_secret" {
+  metadata {
+    name      = "postgres-secret"
+    namespace = "sherpany"
+  }
+
+  data = {
+    DB_NAME     = "testdb"
+    DB_USER     = "postgres"
+    DB_PASSWORD = "securepassword123"  # Use proper secret management in production
+  }
+}
+
+# Database Init ConfigMap
+resource "kubernetes_config_map" "postgres_init" {
+  metadata {
+    name      = "postgres-init"
+    namespace = "sherpany"
+  }
+
+  data = {
+    "init.sql" = file("${path.module}/../source/init.sql")
+  }
+}
+
+# PostgreSQL StatefulSet
+resource "kubernetes_stateful_set" "postgres" {
+  metadata {
+    name      = "postgres"
+    namespace = "sherpany"
+  }
+
+  spec {
+    service_name = "postgres"
+    replicas     = 1
+
+    selector {
+      match_labels = {
+        app = "postgres"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          app = "postgres"
+        }
+      }
+
+      spec {
+        container {
+          name  = "postgres"
+          image = "postgres:13-alpine"
+
+          env_from {
+            secret_ref {
+              name = kubernetes_secret.postgres_secret.metadata[0].name
+            }
+          }
+
+          port {
+            container_port = 5432
+          }
+
+          volume_mount {
+            name       = "postgres-data"
+            mount_path = "/var/lib/postgresql/data"
+          }
+
+          volume_mount {
+            name       = "init-script"
+            mount_path = "/docker-entrypoint-initdb.d"
+          }
+
+          resources {
+            limits = {
+              cpu    = "500m"
+              memory = "512Mi"
+            }
+            requests = {
+              cpu    = "250m"
+              memory = "256Mi"
+            }
+          }
+        }
+
+        volume {
+          name = "init-script"
+          config_map {
+            name = kubernetes_config_map.postgres_init.metadata[0].name
+          }
+        }
+      }
+    }
+
+    volume_claim_template {
+      metadata {
+        name = "postgres-data"
+      }
+      spec {
+        access_modes = ["ReadWriteOnce"]
+        resources {
+          requests = {
+            storage = "1Gi"
+          }
+        }
+      }
+    }
+  }
+}
+
+# PostgreSQL Service
+resource "kubernetes_service" "postgres" {
+  metadata {
+    name      = "postgres"
+    namespace = "sherpany"
+  }
+
+  spec {
+    selector = {
+      app = "postgres"
+    }
+
+    port {
+      port        = 5432
+      target_port = 5432
+    }
+  }
+}
+
 # Flask App Deployment
 resource "kubernetes_deployment" "flask_app" {
   metadata {
     name      = "flask-app"
     namespace = "sherpany"
+    labels = {
+      "prometheus.io/scrape" = "true"
+      "prometheus.io/port"   = "5000"
+      "prometheus.io/path"   = "/metrics"
+    }
   }
 
   spec {
@@ -106,18 +242,13 @@ resource "kubernetes_deployment" "flask_app" {
       }
     }
 
-    strategy {
-      type = "RollingUpdate"
-      rolling_update {
-        max_unavailable = "25%"
-        max_surge       = "25%"
-      }
-    }
-
     template {
       metadata {
         labels = {
           app = "flask-app"
+          "prometheus.io/scrape" = "true"
+          "prometheus.io/port"   = "5000"
+          "prometheus.io/path"   = "/metrics"
         }
       }
 
@@ -130,27 +261,60 @@ resource "kubernetes_deployment" "flask_app" {
             container_port = 5000
           }
 
+          env_from {
+            secret_ref {
+              name = kubernetes_secret.postgres_secret.metadata[0].name
+            }
+          }
+
+          env {
+            name  = "DB_HOST"
+            value = kubernetes_service.postgres.metadata[0].name
+          }
+
+          env {
+            name  = "DB_PORT"
+            value = "5432"
+          }
+
           security_context {
             run_as_user                = 1000
-            run_as_non_root            = true
+            run_as_non_root           = true
             allow_privilege_escalation = false
           }
 
           resources {
-            requests = {
-              cpu    = "250m"
-              memory = "128Mi"
-            }
             limits = {
               cpu    = "500m"
               memory = "256Mi"
             }
+            requests = {
+              cpu    = "250m"
+              memory = "128Mi"
+            }
+          }
+
+          liveness_probe {
+            http_get {
+              path = "/health"
+              port = 5000
+            }
+            initial_delay_seconds = 15
+            period_seconds       = 20
+          }
+
+          readiness_probe {
+            http_get {
+              path = "/health"
+              port = 5000
+            }
+            initial_delay_seconds = 15
+            period_seconds       = 20
           }
         }
       }
     }
   }
-  depends_on = [kubernetes_namespace.sherpany]
 }
 
 # Flask Service
@@ -172,5 +336,50 @@ resource "kubernetes_service" "flask_service" {
 
     type = "LoadBalancer"
   }
-  depends_on = [kubernetes_deployment.flask_app]
+}
+
+# Network Policy
+resource "kubernetes_network_policy" "flask_network_policy" {
+  metadata {
+    name      = "flask-network-policy"
+    namespace = "sherpany"
+  }
+
+  spec {
+    pod_selector {
+      match_labels = {
+        app = "flask-app"
+      }
+    }
+
+    ingress {
+      from {
+        namespace_selector {
+          match_labels = {
+            name = "monitoring"
+          }
+        }
+      }
+      ports {
+        port     = 5000
+        protocol = "TCP"
+      }
+    }
+
+    egress {
+      to {
+        pod_selector {
+          match_labels = {
+            app = "postgres"
+          }
+        }
+      }
+      ports {
+        port     = 5432
+        protocol = "TCP"
+      }
+    }
+
+    policy_types = ["Ingress", "Egress"]
+  }
 }
