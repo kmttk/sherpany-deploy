@@ -44,7 +44,10 @@ resource "azurerm_container_registry" "sherpany_acr" {
     project     = "sherpany"
     owner       = "devops"
   }
-  
+
+  depends_on = [
+    azurerm_resource_group.sherpany_rg
+  ]
 }
 
 # AKS Cluster
@@ -76,6 +79,7 @@ resource "azurerm_role_assignment" "acr_pull" {
   principal_id         = azurerm_kubernetes_cluster.sherpany_aks.kubelet_identity[0].object_id
   role_definition_name = "AcrPull"
   scope               = azurerm_container_registry.sherpany_acr.id
+  depends_on          = [azurerm_container_registry.sherpany_acr]
 }
 
 # Kubernetes Namespace
