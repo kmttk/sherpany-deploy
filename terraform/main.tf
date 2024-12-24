@@ -10,37 +10,6 @@ resource "azurerm_resource_group" "sherpany_rg" {
   }
 }
 
-# Storage Account for Terraform State
-resource "azurerm_storage_account" "terraform_state" {
-  name                     = "sherpanyterraformstate"
-  resource_group_name      = azurerm_resource_group.sherpany_rg.name
-  location                 = azurerm_resource_group.sherpany_rg.location
-  account_tier             = "Standard"
-  account_replication_type = "LRS"
-  min_tls_version         = "TLS1_2"
-
-  depends_on = [azurerm_resource_group.sherpany_rg]
-
-  blob_properties {
-    versioning_enabled = true
-  }
-
-  tags = {
-    environment = "production"
-    project     = "sherpany"
-    owner       = "devops"
-  }
-}
-
-# Storage Container for Terraform State
-resource "azurerm_storage_container" "terraform_state" {
-  name                  = "tfstate"
-  storage_account_name  = azurerm_storage_account.terraform_state.name
-  container_access_type = "private"
-
-  depends_on = [azurerm_storage_account.terraform_state]
-}
-
 # Azure Container Registry
 resource "azurerm_container_registry" "sherpany_acr" {
   name                = "sherpanyacr"
@@ -68,25 +37,28 @@ resource "azurerm_kubernetes_cluster" "sherpany_aks" {
   default_node_pool {
     name       = "default"
     node_count = 1
-    vm_size    = "Standard_DS2_v2"
+    vm_size    = "Standard_D2_v2"
   }
 
   identity {
     type = "SystemAssigned"
   }
 
-  network_profile {
-    network_plugin    = "azure"
-    load_balancer_sku = "standard"
+  tags = {
+    environment = "production"
+    project     = "sherpany"
+    owner       = "devops"
   }
 }
 
+# ACR Pull Role Assignment
 resource "azurerm_role_assignment" "acr_pull" {
   principal_id         = azurerm_kubernetes_cluster.sherpany_aks.kubelet_identity[0].object_id
   role_definition_name = "AcrPull"
   scope               = azurerm_container_registry.sherpany_acr.id
 }
 
+# Kubernetes Namespace
 resource "kubernetes_namespace" "sherpany" {
   metadata {
     name = "sherpany"
@@ -94,9 +66,10 @@ resource "kubernetes_namespace" "sherpany" {
   depends_on = [azurerm_kubernetes_cluster.sherpany_aks]
 }
 
+# Flask App Deployment
 resource "kubernetes_deployment" "flask_app" {
   metadata {
-    name = "flask-app"
+    name      = "flask-app"
     namespace = "sherpany"
   }
 
@@ -128,13 +101,14 @@ resource "kubernetes_deployment" "flask_app" {
         container {
           name  = "flask-app"
           image = "${azurerm_container_registry.sherpany_acr.login_server}/flask-app:latest"
+          
           port {
             container_port = 5000
           }
 
           security_context {
-            run_as_user     = 1000
-            run_as_non_root = true
+            run_as_user                = 1000
+            run_as_non_root           = true
             allow_privilege_escalation = false
           }
 
@@ -154,8 +128,8 @@ resource "kubernetes_deployment" "flask_app" {
               path = "/health"
               port = 5000
             }
-            initial_delay_seconds = 5
-            period_seconds        = 10
+            initial_delay_seconds = 15
+            period_seconds       = 20
           }
 
           readiness_probe {
@@ -163,20 +137,20 @@ resource "kubernetes_deployment" "flask_app" {
               path = "/health"
               port = 5000
             }
-            initial_delay_seconds = 5
-            period_seconds        = 10
+            initial_delay_seconds = 15
+            period_seconds       = 20
           }
         }
       }
     }
   }
-
-  depends_on = [azurerm_kubernetes_cluster.sherpany_aks]
+  depends_on = [kubernetes_namespace.sherpany]
 }
 
+# Flask Service
 resource "kubernetes_service" "flask_service" {
   metadata {
-    name = "flask-service"
+    name      = "flask-service"
     namespace = "sherpany"
   }
 
@@ -186,13 +160,11 @@ resource "kubernetes_service" "flask_service" {
     }
 
     port {
-      protocol    = "TCP"
       port        = 80
       target_port = 5000
     }
 
     type = "LoadBalancer"
   }
-
-  depends_on = [azurerm_kubernetes_cluster.sherpany_aks]
+  depends_on = [kubernetes_deployment.flask_app]
 }

@@ -13,10 +13,6 @@ RUN groupadd -g 1000 appgroup && \
 
 USER appuser
 
-HEALTHCHECK --interval=30s --timeout=3s \
-    CMD curl -f http://localhost:5000/health || exit 1
-
 EXPOSE 5000
 
-# Update path to app.py
 CMD ["gunicorn", "--bind", "0.0.0.0:5000", "source.app:app"]
