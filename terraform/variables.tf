@@ -27,5 +27,5 @@ variable "aks_name" {
 }
 
 variable "acr_name" {
-  default = "sherpanyacr.azurecr.io"
+  default = "sherpanyacr"
 }
