@@ -27,7 +27,8 @@ jobs:
           docker push ${{ secrets.ACR_NAME }}.azurecr.io/flask-app:latest
 
   deploy:
-    needs: [build] 
+    if: ${{ inputs.skip_build == 'true' || (needs.build.result == 'success') }}
+    needs: [build]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -57,7 +58,7 @@ jobs:
             -backend-config="container_name=${{ secrets.TERRAFORM_CONTAINER }}" \
             -backend-config="key=terraform.tfstate" \
             -backend-config="access_key=${{ secrets.TERRAFORM_ACCESS_KEY }}"
-          terraform plan -out=tfplan
+          terraform plan -lock=false -out=tfplan
 
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main'
@@ -66,4 +67,4 @@ jobs:
           TF_VAR_azure_client_id: ${{ secrets.AZURE_CLIENT_ID }}
           TF_VAR_azure_client_secret: ${{ secrets.AZURE_CLIENT_SECRET }}
           TF_VAR_azure_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
-        run: terraform apply -auto-approve tfplan
+        run: terraform apply -auto-approve -lock=false tfplan
