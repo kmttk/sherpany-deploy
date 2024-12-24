@@ -86,17 +86,14 @@ jobs:
             -backend-config="key=terraform.tfstate" \
             -backend-config="access_key=${{ secrets.TERRAFORM_ACCESS_KEY }}"
 
-            # Import existing resource group
-            terraform import azurerm_resource_group.sherpany_rg "/subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/sherpany-rg"
-            
-            # Import existing ACR
-            terraform import azurerm_container_registry.acr "/subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/sherpany-rg/providers/Microsoft.ContainerRegistry/registries/${{ secrets.ACR_NAME }}"
-            
-            # Import existing AKS cluster
-            terraform import azurerm_kubernetes_cluster.aks "/subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/sherpany-rg/providers/Microsoft.ContainerService/managedClusters/sherpany-aks"
-            
-            # Import existing Storage Account
-            terraform import azurerm_storage_account.tfstate "/subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/sherpany-rg/providers/Microsoft.Storage/storageAccounts/${{ secrets.TERRAFORM_STORAGE_ACCOUNT }}"
+          # Import existing resources
+          terraform import azurerm_resource_group.sherpany_rg "/subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/sherpany-rg"
+          
+          terraform import azurerm_container_registry.sherpany_acr "/subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/sherpany-rg/providers/Microsoft.ContainerRegistry/registries/sherpanyacr"
+          
+          terraform import azurerm_kubernetes_cluster.sherpany_aks "/subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/sherpany-rg/providers/Microsoft.ContainerService/managedClusters/sherpany-aks"
+          
+          terraform import azurerm_storage_account.terraform_state_storage "/subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/sherpany-rg/providers/Microsoft.Storage/storageAccounts/sherpanyterraformstate"
           
           terraform plan -out=tfplan -refresh=false
       
