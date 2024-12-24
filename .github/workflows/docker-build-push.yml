@@ -33,6 +33,9 @@ jobs:
     name: Deploy Infrastructure
     needs: build-and-push
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./terraform
 
     steps:
     - name: Checkout Code
@@ -50,16 +53,15 @@ jobs:
 
     - name: Terraform Init
       run: |
-        terraform init \
-          -backend-config=backend.tfvars
+        terraform init -reconfigure \
+          -backend-config="storage_account_name=${{ secrets.TERRAFORM_STORAGE_ACCOUNT }}" \
+          -backend-config="container_name=${{ secrets.TERRAFORM_CONTAINER }}" \
+          -backend-config="key=terraform.tfstate" \
+          -backend-config="access_key=${{ secrets.TERRAFORM_ACCESS_KEY }}"
 
     - name: Terraform Plan
-      run: |
-        cd terraform
-        terraform plan -out=main.tfplan
+      run: terraform plan -out=tfplan
 
     - name: Terraform Apply
       if: github.ref == 'refs/heads/main'
-      run: |
-        cd terraform
-        terraform apply -auto-approve main.tfplan
+      run: terraform apply -auto-approve tfplan
