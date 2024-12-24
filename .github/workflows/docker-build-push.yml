@@ -57,13 +57,19 @@ jobs:
         TF_VAR_azure_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
 
     - name: Terraform Init and Plan
+      env:
+        TF_VAR_azure_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        TF_VAR_azure_client_id: ${{ secrets.AZURE_CLIENT_ID }}
+        TF_VAR_azure_client_secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+        TF_VAR_azure_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
       run: |
-        terraform init -reconfigure \
-          -backend-config="storage_account_name=${{ secrets.TERRAFORM_STORAGE_ACCOUNT }}" \
-          -backend-config="container_name=${{ secrets.TERRAFORM_CONTAINER }}" \
-          -backend-config="key=terraform.tfstate" \
-          -backend-config="access_key=${{ secrets.TERRAFORM_ACCESS_KEY }}"
+        # Create backend.tfvars dynamically
+        echo "storage_account_name=\"${{ secrets.TERRAFORM_STORAGE_ACCOUNT }}\"" > backend.tfvars
+        echo "container_name=\"${{ secrets.TERRAFORM_CONTAINER }}\"" >> backend.tfvars
+        echo "key=\"terraform.tfstate\"" >> backend.tfvars
+        echo "access_key=\"${{ secrets.TERRAFORM_ACCESS_KEY }}\"" >> backend.tfvars
         
+        terraform init -reconfigure -backend-config=backend.tfvars
         terraform plan -lock=false -out=tfplan
 
     - name: Terraform Apply
