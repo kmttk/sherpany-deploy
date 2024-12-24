@@ -17,15 +17,3 @@ variable "azure_tenant_id" {
   type        = string
   sensitive   = true
 }
-
-variable "resource_group_name" {
-  default = "sherpany-rg"
-}
-
-variable "aks_name" {
-  default = "sherpany-aks"
-}
-
-variable "acr_name" {
-  default = "sherpanyacr"
-}
