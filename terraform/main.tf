@@ -87,102 +87,102 @@ resource "azurerm_role_assignment" "acr_pull" {
   scope               = azurerm_container_registry.sherpany_acr.id
 }
 
-# resource "kubernetes_deployment" "flask_app" {
-#   metadata {
-#     name = "flask-app"
-#   }
+resource "kubernetes_deployment" "flask_app" {
+  metadata {
+    name = "flask-app"
+  }
 
-#   spec {
-#     replicas = 3
+  spec {
+    replicas = 3
 
-#     selector {
-#       match_labels = {
-#         app = "flask-app"
-#       }
-#     }
+    selector {
+      match_labels = {
+        app = "flask-app"
+      }
+    }
 
-#     strategy {
-#       type = "RollingUpdate"
-#       rolling_update {
-#         max_unavailable = "25%"
-#         max_surge       = "25%"
-#       }
-#     }
+    strategy {
+      type = "RollingUpdate"
+      rolling_update {
+        max_unavailable = "25%"
+        max_surge       = "25%"
+      }
+    }
 
-#     template {
-#       metadata {
-#         labels = {
-#           app = "flask-app"
-#         }
-#       }
+    template {
+      metadata {
+        labels = {
+          app = "flask-app"
+        }
+      }
 
-#       spec {
-#         container {
-#           name  = "flask-app"
-#           image = "${azurerm_container_registry.sherpany_acr.login_server}/flask-app:latest"
-#           port {
-#             container_port = 5000
-#           }
+      spec {
+        container {
+          name  = "flask-app"
+          image = "${azurerm_container_registry.sherpany_acr.login_server}/flask-app:latest"
+          port {
+            container_port = 5000
+          }
 
-#           security_context {
-#             run_as_non_root             = true
-#             allow_privilege_escalation = false
-#           }
+          security_context {
+            run_as_non_root             = true
+            allow_privilege_escalation = false
+          }
 
-#           resources {
-#             requests = {
-#               cpu    = "250m"
-#               memory = "128Mi"
-#             }
-#             limits = {
-#               cpu    = "500m"
-#               memory = "256Mi"
-#             }
-#           }
+          resources {
+            requests = {
+              cpu    = "250m"
+              memory = "128Mi"
+            }
+            limits = {
+              cpu    = "500m"
+              memory = "256Mi"
+            }
+          }
 
-#           liveness_probe {
-#             http_get {
-#               path = "/health"
-#               port = 5000
-#             }
-#             initial_delay_seconds = 5
-#             period_seconds        = 10
-#           }
+          liveness_probe {
+            http_get {
+              path = "/health"
+              port = 5000
+            }
+            initial_delay_seconds = 5
+            period_seconds        = 10
+          }
 
-#           readiness_probe {
-#             http_get {
-#               path = "/health"
-#               port = 5000
-#             }
-#             initial_delay_seconds = 5
-#             period_seconds        = 10
-#           }
-#         }
-#       }
-#     }
-#   }
+          readiness_probe {
+            http_get {
+              path = "/health"
+              port = 5000
+            }
+            initial_delay_seconds = 5
+            period_seconds        = 10
+          }
+        }
+      }
+    }
+  }
 
-#   depends_on = [azurerm_kubernetes_cluster.sherpany_aks]
-# }
+  depends_on = [azurerm_kubernetes_cluster.sherpany_aks]
+}
 
-# resource "kubernetes_service" "flask_service" {
-#   metadata {
-#     name = "flask-service"
-#   }
+resource "kubernetes_service" "flask_service" {
+  metadata {
+    name = "flask-service"
+  }
 
-#   spec {
-#     selector = {
-#       app = "flask-app"
-#     }
+  spec {
+    selector = {
+      app = "flask-app"
+    }
 
-#     port {
-#       protocol    = "TCP"
-#       port        = 80
-#       target_port = 5000
-#     }
+    port {
+      protocol    = "TCP"
+      port        = 80
+      target_port = 5000
+    }
 
-#     type = "LoadBalancer"
-#   }
+    type = "LoadBalancer"
+  }
 
-#   depends_on = [azurerm_kubernetes_cluster.sherpany_aks]
-# }
+  depends_on = [azurerm_kubernetes_cluster.sherpany_aks]
+}
