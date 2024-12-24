@@ -97,6 +97,7 @@ resource "kubernetes_namespace" "sherpany" {
 resource "kubernetes_deployment" "flask_app" {
   metadata {
     name = "flask-app"
+    namespace = "sherpany"
   }
 
   spec {
