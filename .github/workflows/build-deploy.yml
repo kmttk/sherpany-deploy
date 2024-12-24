@@ -56,7 +56,23 @@ jobs:
         with:
           terraform_version: 1.10.3
       
-      - name: Terraform Init and Plan
+      - name: Debug State
+        run: |
+          # List all state files
+          az storage blob list \
+            --account-name ${{ secrets.TERRAFORM_STORAGE_ACCOUNT }} \
+            --container-name ${{ secrets.TERRAFORM_CONTAINER }} \
+            --account-key ${{ secrets.TERRAFORM_ACCESS_KEY }} \
+            --output table
+
+          # Delete state if exists
+          az storage blob delete \
+            --account-name ${{ secrets.TERRAFORM_STORAGE_ACCOUNT }} \
+            --container-name ${{ secrets.TERRAFORM_CONTAINER }} \
+            --name terraform.tfstate \
+            --account-key ${{ secrets.TERRAFORM_ACCESS_KEY }}
+
+      - name: Terraform Init and Import
         env:
           TF_VAR_azure_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           TF_VAR_azure_client_id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -70,6 +86,9 @@ jobs:
             -backend-config="key=terraform.tfstate" \
             -backend-config="access_key=${{ secrets.TERRAFORM_ACCESS_KEY }}"
 
+          # Import existing resource group
+          terraform import azurerm_resource_group.sherpany_rg "/subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/sherpany-rg"
+          
           terraform plan -out=tfplan -refresh=false
       
       - name: Terraform Apply
