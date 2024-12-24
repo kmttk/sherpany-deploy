@@ -74,7 +74,7 @@ resource "azurerm_kubernetes_cluster" "sherpany_aks" {
   }
 }
 
-ACR Pull Role Assignment
+#ACR Pull Role Assignment
 resource "azurerm_role_assignment" "acr_pull" {
   principal_id         = azurerm_kubernetes_cluster.sherpany_aks.kubelet_identity[0].object_id
   role_definition_name = "AcrPull"
