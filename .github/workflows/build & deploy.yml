@@ -1,20 +1,40 @@
-name: Deploy Infrastructure
+name: Deploy or Build+Deploy
+
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'terraform/**'
+    inputs:
+      skip_build:
+        description: "Skip building the container?"
+        required: true
+        default: "false"
 
 jobs:
+  build:
+    if: ${{ inputs.skip_build == 'false' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Build and Push Docker Image
+        run: |
+          az acr login --name ${{ secrets.ACR_NAME }}
+          docker build -t ${{ secrets.ACR_NAME }}.azurecr.io/flask-app:latest .
+          docker push ${{ secrets.ACR_NAME }}.azurecr.io/flask-app:latest
+
   deploy:
+    needs: [build] 
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: ./terraform
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Azure Login
         uses: azure/login@v1
         with:
@@ -37,7 +57,7 @@ jobs:
             -backend-config="container_name=${{ secrets.TERRAFORM_CONTAINER }}" \
             -backend-config="key=terraform.tfstate" \
             -backend-config="access_key=${{ secrets.TERRAFORM_ACCESS_KEY }}"
-          terraform plan -lock=false -out=tfplan
+          terraform plan -out=tfplan
 
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main'
@@ -46,4 +66,4 @@ jobs:
           TF_VAR_azure_client_id: ${{ secrets.AZURE_CLIENT_ID }}
           TF_VAR_azure_client_secret: ${{ secrets.AZURE_CLIENT_SECRET }}
           TF_VAR_azure_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
-        run: terraform apply -auto-approve -lock=false tfplan
+        run: terraform apply -auto-approve tfplan
