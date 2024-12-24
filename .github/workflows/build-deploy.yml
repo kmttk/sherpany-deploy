@@ -57,6 +57,14 @@ jobs:
         with:
           terraform_version: 1.10.3
       
+      - name: Reset Terraform State
+        run: |
+          az storage blob delete \
+            --account-name ${{ secrets.TERRAFORM_STORAGE_ACCOUNT }} \
+            --container-name ${{ secrets.TERRAFORM_CONTAINER }} \
+            --name terraform.tfstate \
+            --account-key ${{ secrets.TERRAFORM_ACCESS_KEY }}
+      
       - name: Terraform Init and Plan
         env:
           TF_VAR_azure_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
@@ -71,7 +79,7 @@ jobs:
             -backend-config="key=terraform.tfstate" \
             -backend-config="access_key=${{ secrets.TERRAFORM_ACCESS_KEY }}"
 
-          terraform plan -out=main.tfplan
+          terraform plan -out=tfplan -refresh=false
       
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main'
@@ -80,4 +88,4 @@ jobs:
           TF_VAR_azure_client_id: ${{ secrets.AZURE_CLIENT_ID }}
           TF_VAR_azure_client_secret: ${{ secrets.AZURE_CLIENT_SECRET }}
           TF_VAR_azure_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
-        run: terraform apply -auto-approve main.tfplan
+        run: terraform apply -auto-approve tfplan
