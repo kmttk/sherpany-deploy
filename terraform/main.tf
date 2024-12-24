@@ -227,6 +227,9 @@ resource "kubernetes_deployment" "flask_app" {
     name      = "flask-app"
     namespace = "sherpany"
     labels = {
+      app = "flask-app"
+    }
+    annotations = {
       "prometheus.io/scrape" = "true"
       "prometheus.io/port"   = "5000"
       "prometheus.io/path"   = "/metrics"
@@ -246,6 +249,8 @@ resource "kubernetes_deployment" "flask_app" {
       metadata {
         labels = {
           app = "flask-app"
+        }
+        annotations = {
           "prometheus.io/scrape" = "true"
           "prometheus.io/port"   = "5000"
           "prometheus.io/path"   = "/metrics"
