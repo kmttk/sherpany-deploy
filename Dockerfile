@@ -18,4 +18,5 @@ HEALTHCHECK --interval=30s --timeout=3s \
 
 EXPOSE 5000
 
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app"]
+# Update path to app.py
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "source.app:app"]
