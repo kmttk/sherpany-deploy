@@ -33,6 +33,20 @@ resource "azurerm_storage_container" "terraform_state_container" {
   depends_on           = [azurerm_storage_account.terraform_state_storage]
 }
 
+resource "azurerm_container_registry" "sherpany_acr" {
+  name                     = "sherpanyacr"
+  resource_group_name      = azurerm_resource_group.sherpany_rg.name
+  location                 = azurerm_resource_group.sherpany_rg.location
+  sku                      = "Basic"
+  admin_enabled            = false
+  tags = {
+    environment = "production"
+    project     = "sherpany"
+    owner       = "devops"
+  }
+  
+}
+
 # AKS Cluster
 resource "azurerm_kubernetes_cluster" "sherpany_aks" {
   name                = "sherpany-aks"
