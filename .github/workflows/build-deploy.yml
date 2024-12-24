@@ -23,9 +23,13 @@ jobs:
       
       - name: Build and Push Docker Image
         run: |
+          TIMESTAMP=$(date +%Y%m%d%H%M%S)
+          IMAGE_TAG="${{ secrets.ACR_NAME }}.azurecr.io/flask-app"
+          
           az acr login --name ${{ secrets.ACR_NAME }}
-          docker build -t ${{ secrets.ACR_NAME }}.azurecr.io/flask-app:latest .
-          docker push ${{ secrets.ACR_NAME }}.azurecr.io/flask-app:latest
+          docker build -t ${IMAGE_TAG}:${TIMESTAMP} -t ${IMAGE_TAG}:latest .
+          docker push ${IMAGE_TAG}:${TIMESTAMP}
+          docker push ${IMAGE_TAG}:latest
 
   deploy:
     timeout-minutes: 10
@@ -59,14 +63,14 @@ jobs:
           TF_VAR_azure_client_id: ${{ secrets.AZURE_CLIENT_ID }}
           TF_VAR_azure_client_secret: ${{ secrets.AZURE_CLIENT_SECRET }}
           TF_VAR_azure_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
-          TF_LOG: DEBUG
         run: |
-          echo "Verifying backend configuration..."
-          terraform init \
+          terraform init -migrate-state -backend-config \
             -backend-config="storage_account_name=${{ secrets.TERRAFORM_STORAGE_ACCOUNT }}" \
             -backend-config="container_name=${{ secrets.TERRAFORM_CONTAINER }}" \
             -backend-config="key=terraform.tfstate" \
             -backend-config="access_key=${{ secrets.TERRAFORM_ACCESS_KEY }}"
+            
+            terraform plan -out=tfplan
           
           echo "Running terraform plan..."
           terraform plan -out=tfplan
