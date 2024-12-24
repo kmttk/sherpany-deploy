@@ -50,20 +50,12 @@ jobs:
       - name: Verify Azure Connection
         run: |
           az account show
-          az storage account show --name ${{ secrets.TERRAFORM_STORAGE_ACCOUNT }} --query id -o tsv
       
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.10.3
       
-      - name: Reset Terraform State
-        run: |
-          az storage blob delete \
-            --account-name ${{ secrets.TERRAFORM_STORAGE_ACCOUNT }} \
-            --container-name ${{ secrets.TERRAFORM_CONTAINER }} \
-            --name terraform.tfstate \
-            --account-key ${{ secrets.TERRAFORM_ACCESS_KEY }}
       
       - name: Terraform Init and Plan
         env:
@@ -72,12 +64,12 @@ jobs:
           TF_VAR_azure_client_secret: ${{ secrets.AZURE_CLIENT_SECRET }}
           TF_VAR_azure_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
         run: |
-          terraform init \
-            -reconfigure \
-            -backend-config="storage_account_name=${{ secrets.TERRAFORM_STORAGE_ACCOUNT }}" \
-            -backend-config="container_name=${{ secrets.TERRAFORM_CONTAINER }}" \
-            -backend-config="key=terraform.tfstate" \
-            -backend-config="access_key=${{ secrets.TERRAFORM_ACCESS_KEY }}"
+          terraform init 
+            # -reconfigure \
+            # -backend-config="storage_account_name=${{ secrets.TERRAFORM_STORAGE_ACCOUNT }}" \
+            # -backend-config="container_name=${{ secrets.TERRAFORM_CONTAINER }}" \
+            # -backend-config="key=terraform.tfstate" \
+            # -backend-config="access_key=${{ secrets.TERRAFORM_ACCESS_KEY }}"
 
           terraform plan -out=tfplan -refresh=false
       
