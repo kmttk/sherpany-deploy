@@ -68,7 +68,6 @@ jobs:
             -backend-config="container_name=${{ secrets.TERRAFORM_CONTAINER }}" \
             -backend-config="key=terraform.tfstate" \
             -backend-config="access_key=${{ secrets.TERRAFORM_ACCESS_KEY }}"
-          terraform import azurerm_storage_container.terraform_state_container "https://sherpanyterraformstate.blob.core.windows.net/tfstate"
       
       - name: Terraform Plan
         env:
