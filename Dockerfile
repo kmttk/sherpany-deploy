@@ -1,12 +1,8 @@
 FROM python:3.9-slim as builder
 
-# Set working directory for build
-WORKDIR /build
-
-# Create and activate virtual environment
-ENV VIRTUAL_ENV=/build/venv
-RUN python -m venv $VIRTUAL_ENV
-ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+# Create virtual environment
+RUN python -m venv /build/venv
+ENV PATH="/build/venv/bin:$PATH"
 
 # Install dependencies
 COPY requirements.txt .
@@ -15,28 +11,22 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Final stage
 FROM python:3.9-slim
 
-# Install curl for healthcheck
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl && \
-    rm -rf /var/lib/apt/lists/*
-
 # Copy virtual environment from builder
 ENV VIRTUAL_ENV=/opt/venv
 COPY --from=builder /build/venv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
-# Set working directory
 WORKDIR /app
 
 # Copy application code
-COPY source/ .
+COPY . .
 
-# Create non-root user
-RUN groupadd -g 1000 customgroup && \
-    useradd -m -u 1000 -g customgroup -s /bin/bash customuser && \
-    chown -R customuser:customgroup /app
+# Create non-root user with explicit UID/GID
+RUN groupadd -g 1000 appgroup && \
+    useradd -u 1000 -g appgroup -s /bin/bash appuser && \
+    chown -R appuser:appgroup /app
 
-USER customuser
+USER appuser
 
 HEALTHCHECK --interval=30s --timeout=3s \
   CMD curl -f http://localhost:5000/health || exit 1

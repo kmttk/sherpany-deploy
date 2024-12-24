@@ -87,6 +87,13 @@ resource "azurerm_role_assignment" "acr_pull" {
   scope               = azurerm_container_registry.sherpany_acr.id
 }
 
+resource "kubernetes_namespace" "sherpany" {
+  metadata {
+    name = "sherpany"
+  }
+  depends_on = [azurerm_kubernetes_cluster.sherpany_aks]
+}
+
 resource "kubernetes_deployment" "flask_app" {
   metadata {
     name = "flask-app"
@@ -125,7 +132,8 @@ resource "kubernetes_deployment" "flask_app" {
           }
 
           security_context {
-            run_as_non_root             = true
+            run_as_user     = 1000
+            run_as_non_root = true
             allow_privilege_escalation = false
           }
 
@@ -168,6 +176,7 @@ resource "kubernetes_deployment" "flask_app" {
 resource "kubernetes_service" "flask_service" {
   metadata {
     name = "flask-service"
+    namespace = "sherpany"
   }
 
   spec {
