@@ -41,6 +41,11 @@ jobs:
     - name: Checkout Code
       uses: actions/checkout@v3
 
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v2
       with:
@@ -51,29 +56,15 @@ jobs:
         TF_VAR_azure_client_secret: ${{ secrets.AZURE_CLIENT_SECRET }}
         TF_VAR_azure_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
 
-    - name: Terraform Init
+    - name: Terraform Init and Plan
       run: |
         terraform init -reconfigure \
           -backend-config="storage_account_name=${{ secrets.TERRAFORM_STORAGE_ACCOUNT }}" \
           -backend-config="container_name=${{ secrets.TERRAFORM_CONTAINER }}" \
           -backend-config="key=terraform.tfstate" \
           -backend-config="access_key=${{ secrets.TERRAFORM_ACCESS_KEY }}"
-
-    - name: Clear Terraform Lock
-      if: failure()
-      run: |
-        terraform force-unlock -force 724820a1-50fc-eb38-9d3f-ff844e79012c
-
-    - name: Terraform Plan
-      env:
-        TF_VAR_azure_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-        TF_VAR_azure_client_id: ${{ secrets.AZURE_CLIENT_ID }}
-        TF_VAR_azure_client_secret: ${{ secrets.AZURE_CLIENT_SECRET }}
-        TF_VAR_azure_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
-      run: |
-        terraform plan -lock=false -out=tfplan || \
-        (terraform force-unlock -force 724820a1-50fc-eb38-9d3f-ff844e79012c && \
-          terraform plan -out=tfplan)
+        
+        terraform plan -lock=false -out=tfplan
 
     - name: Terraform Apply
       if: github.ref == 'refs/heads/main'
