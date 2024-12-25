@@ -38,6 +38,20 @@ resource "azurerm_network_security_group" "nsg" {
     }
 }
 
+resource "azurerm_network_security_rule" "metrics" {
+  name                        = "metrics"
+  priority                    = 1003
+  direction                   = "Inbound"
+  access                      = "Allow"
+  protocol                    = "Tcp"
+  source_port_range          = "*"
+  destination_port_range     = "9100"
+  source_address_prefix      = "*"
+  destination_address_prefix = "*"
+  resource_group_name         = azurerm_resource_group.sherpany_resources.name
+  network_security_group_name = azurerm_network_security_group.vm_nsg.name
+}
+
 # Public IP
 resource "azurerm_public_ip" "pip" {
     name                = "ubuntu-pip"
@@ -97,4 +111,40 @@ resource "azurerm_linux_virtual_machine" "vm" {
     boot_diagnostics {
         storage_account_uri = azurerm_storage_account.logs.primary_blob_endpoint
     }
+custom_data = base64encode(<<-EOF
+    #!/bin/bash
+    
+    # Add Grafana GPG key and repository
+    wget -q -O - https://apt.grafana.com/gpg.key | sudo apt-key add -
+    echo "deb https://apt.grafana.com stable main" | sudo tee /etc/apt/sources.list.d/grafana.list
+    
+    # Update and install
+    apt-get update
+    apt-get install -y grafana-agent
+
+    # Create agent config
+    cat > /etc/grafana-agent.yaml <<'EOL'
+    server:
+      log_level: info
+
+    metrics:
+      global:
+        scrape_interval: 15s
+        remote_write:
+          - url: "http://prometheus-server.monitoring.svc.cluster.local:9090/api/v1/write"
+      
+      configs:
+        - name: node_metrics
+          scrape_configs:
+            - job_name: node
+              static_configs:
+                - targets: ['localhost:9100']
+EOL
+
+    # Enable and start service
+    systemctl enable grafana-agent
+    systemctl start grafana-agent
+  EOF
+  )
 }
+

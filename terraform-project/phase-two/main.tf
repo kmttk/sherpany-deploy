@@ -1,4 +1,3 @@
-# Resource Group
 data "azurerm_resource_group" "sherpany_resources" {
   name = "sherpany-resources"
 }
@@ -40,6 +39,12 @@ data "azurerm_log_analytics_workspace" "aks-law" {
   resource_group_name = data.azurerm_resource_group.sherpany_resources.name
 }
 
+
+resource "kubernetes_namespace" "monitoring" {
+  metadata {
+    name = "monitoring"
+  }
+}
 
 # PostgreSQL Firewall Rule for AKS
 resource "azurerm_postgresql_firewall_rule" "aks" {
@@ -237,3 +242,71 @@ resource "kubernetes_service" "flask_service" {
   }
   depends_on = [kubernetes_deployment.flask_app]
 }
+
+resource "kubernetes_namespace" "monitoring" {
+  metadata {
+    name = "monitoring"
+    
+  }
+  depends_on = [kubernete_service.flask_service]
+  }
+
+resource "helm_release" "prometheus" {
+  name       = "prometheus"
+  repository = "https://prometheus-community.github.io/helm-charts"
+  chart      = "prometheus"
+  namespace  = kubernetes_namespace.monitoring.metadata[0].name
+  version    = "25.8.0"
+
+  values = [
+    <<-EOT
+    serviceMonitorSelectorNilUsesHelmValues: false
+    prometheus:
+      prometheusSpec:
+        serviceMonitorSelector: {}
+    EOT
+  ]
+
+  set {
+    name  = "server.persistentVolume.size"
+    value = "10Gi"
+  }
+
+  set {
+    name  = "server.service.type"
+    value = "ClusterIP"
+  }
+
+  depends_on = [helm_release.prometheus]
+}
+
+resource "kubernetes_manifest" "flask_service_monitor" {
+  manifest = {
+    apiVersion = "monitoring.coreos.com/v1"
+    kind       = "ServiceMonitor"
+    metadata = {
+      name      = "flask-app-monitor"
+      namespace = "monitoring"
+      labels = {
+        release = "prometheus"
+      }
+    }
+    spec = {
+      selector = {
+        matchLabels = {
+          app = "flask-app"
+        }
+      }
+      endpoints = [
+        {
+          port   = "http"
+          path   = "/metrics"
+          interval = "15s"
+          scrapeTimeout = "10s"
+        }
+      ]
+    }
+  }
+  depends_on = [helm_release.prometheus]
+}
+
