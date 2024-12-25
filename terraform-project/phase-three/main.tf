@@ -77,6 +77,7 @@ resource "azurerm_linux_virtual_machine" "vm" {
     size                = "Standard_B2s"
     admin_username      = "adminuser"
     admin_password      = var.azure_linux_vm_secret
+    disable_password_authentication = false
 
     network_interface_ids = [
         azurerm_network_interface.nic.id,
