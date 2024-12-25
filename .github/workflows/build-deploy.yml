@@ -31,11 +31,6 @@ jobs:
       - name: Terraform Apply Phase 1
         if: github.ref == 'refs/heads/main'
         run: terraform apply -auto-approve phase1.tfplan
-      - name: Capture Output
-        id: capture_output
-        run: echo "terraform_access_key=$(terraform output -raw TERRAFORM_ACCESS_KEY)" >> $GITHUB_OUTPUT
-    outputs:
-      terraform_access_key: ${{ steps.capture_output.outputs.terraform_access_key }}
 
   build:
     needs: [deploy-phase1]
@@ -67,7 +62,6 @@ jobs:
     env:
       ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
       ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-      ARM_ACCESS_KEY: ${{ needs.deploy-phase1.outputs.terraform_access_key }}
       ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
       TF_VAR_azure_client_id: ${{ secrets.AZURE_CLIENT_ID }}
       TF_VAR_azure_client_secret: ${{ secrets.AZURE_CLIENT_SECRET }}
@@ -79,6 +73,9 @@ jobs:
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Get Storage Account primary key via az cli
+        id: get-key
+        run: echo "::set-output name=ARM_ACCESS_KEY::$(az storage account keys list --resource-group sherpany-resources --account-name sherpanyterraformstate --query [0].value -o tsv)"
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
