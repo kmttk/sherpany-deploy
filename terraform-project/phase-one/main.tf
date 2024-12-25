@@ -89,3 +89,15 @@ resource "azurerm_log_analytics_workspace" "aks" {
   }
   depends_on = [azurerm_resource_group.sherpany_resources]
 }
+
+# Get the storage account key
+data "azurerm_storage_account_keys" "terraform_state_storage_keys" {
+  name                = azurerm_storage_account.terraform_state_storage.name
+  resource_group_name = azurerm_resource_group.sherpany_resources.name
+  depends_on          = [azurerm_storage_account.terraform_state_storage]
+}
+
+output "TERRAFORM_STORAGE_ACCOUNT" {
+  value     = data.azurerm_storage_account_keys.terraform_state_storage_keys.keys[0].value
+  sensitive = true
+}
