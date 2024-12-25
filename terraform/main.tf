@@ -84,12 +84,57 @@ resource "azurerm_postgresql_firewall_rule" "aks" {
   depends_on          = [azurerm_postgresql_server.postgres, azurerm_kubernetes_cluster.sherpany_aks]
 }
 
+# Initialize Database Schema
+resource "null_resource" "db_setup" {
+  provisioner "local-exec" {
+    command = <<-EOT
+      PGPASSWORD=${azurerm_postgresql_server.postgres.administrator_login_password} psql \
+      -h ${azurerm_postgresql_server.postgres.fqdn} \
+      -p 5432 \
+      -U ${azurerm_postgresql_server.postgres.administrator_login}@${azurerm_postgresql_server.postgres.name} \
+      -d ${azurerm_postgresql_database.db.name} \
+      -f ${path.module}/../source/init.sql
+    EOT
+  }
+  
+  depends_on = [
+    azurerm_postgresql_database.db,
+    azurerm_postgresql_firewall_rule.aks
+  ]
+}
+
+# Log Analytics Workspace
+resource "azurerm_log_analytics_workspace" "aks" {
+  name                = "sherpany-law"
+  location            = azurerm_resource_group.sherpany_rg.location
+  resource_group_name = azurerm_resource_group.sherpany_rg.name
+  sku                = "PerGB2018"
+  retention_in_days   = 30
+
+  tags = {
+    environment = "production"
+    project     = "sherpany"
+    owner       = "devops"
+  }
+  depends_on = [azurerm_resource_group.sherpany_rg]
+}
+
+
 # AKS Cluster
 resource "azurerm_kubernetes_cluster" "sherpany_aks" {
   name                = "sherpany-aks"
   location            = azurerm_resource_group.sherpany_rg.location
   resource_group_name = azurerm_resource_group.sherpany_rg.name
   dns_prefix          = "sherpanyaks"
+  
+  network_profile {
+    network_plugin    = "azure"
+    network_policy    = "azure"
+  }
+
+  oms_agent {
+    log_analytics_workspace_id = azurerm_log_analytics_workspace.aks.id
+  }
 
   default_node_pool {
     name       = "default"
@@ -100,7 +145,62 @@ resource "azurerm_kubernetes_cluster" "sherpany_aks" {
   identity {
     type = "SystemAssigned"
   }
-  depends_on = [azurerm_resource_group.sherpany_rg]
+
+  tags = {
+    environment = "production"
+    project     = "sherpany"
+    owner       = "devops"
+  }
+
+  depends_on = [azurerm_resource_group.sherpany_rg, azurerm_log_analytics_workspace.aks]
+}
+
+# Container Insights Solution
+resource "azurerm_log_analytics_solution" "container_insights" {
+  solution_name         = "ContainerInsights"
+  location             = azurerm_resource_group.sherpany_rg.location
+  resource_group_name  = azurerm_resource_group.sherpany_rg.name
+  workspace_resource_id = azurerm_log_analytics_workspace.aks.id
+  workspace_name       = azurerm_log_analytics_workspace.aks.name
+
+  plan {
+    publisher = "Microsoft"
+    product   = "OMSGallery/ContainerInsights"
+  }
+
+  depends_on = [azurerm_log_analytics_workspace.aks]
+}
+# AKS Diagnostic Settings
+resource "azurerm_monitor_diagnostic_setting" "aks" {
+  name                       = "aks-diagnostics"
+  target_resource_id        = azurerm_kubernetes_cluster.sherpany_aks.id
+  log_analytics_workspace_id = azurerm_log_analytics_workspace.aks.id
+
+  enabled_log {
+    category = "kube-apiserver"
+  }
+
+  enabled_log {
+    category = "kube-audit"
+  }
+
+  enabled_log {
+    category = "kube-controller-manager"
+  }
+
+  enabled_log {
+    category = "kube-scheduler"
+  }
+
+  enabled_log {
+    category = "cluster-autoscaler"
+  }
+
+  metric {
+    category = "AllMetrics"
+  }
+
+  depends_on = [azurerm_kubernetes_cluster.sherpany_aks, azurerm_log_analytics_workspace.aks]
 }
 
 # Kubernetes Namespace
@@ -145,7 +245,6 @@ resource "kubernetes_deployment" "flask_app" {
 
   spec {
     replicas = 3
-
     selector {
       match_labels = {
         app = "flask-app"
@@ -194,24 +293,6 @@ resource "kubernetes_deployment" "flask_app" {
               cpu    = "250m"
               memory = "128Mi"
             }
-          }
-
-          liveness_probe {
-            http_get {
-              path = "/health"
-              port = 5000
-            }
-            initial_delay_seconds = 15
-            period_seconds       = 20
-          }
-
-          readiness_probe {
-            http_get {
-              path = "/health"
-              port = 5000
-            }
-            initial_delay_seconds = 15
-            period_seconds       = 20
           }
         }
       }
