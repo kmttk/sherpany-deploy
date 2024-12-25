@@ -101,3 +101,38 @@ output "TERRAFORM_ACCESS_KEY" {
   value     = data.azurerm_storage_account.terraform_state_storage.primary_access_key
   sensitive = true
 }
+
+# AKS Cluster
+resource "azurerm_kubernetes_cluster" "sherpany_aks" {
+  name                = "sherpany-aks"
+  location            = azurerm_resource_group.sherpany_resources.location
+  resource_group_name = azurerm_resource_group.sherpany_resources.name
+  dns_prefix          = "sherpanyaks"
+  
+  network_profile {
+    network_plugin    = "azure"
+    network_policy    = "azure"
+  }
+
+  oms_agent {
+    log_analytics_workspace_id = azurerm_log_analytics_workspace.aks.id
+  }
+
+  default_node_pool {
+    name       = "default"
+    node_count = 1
+    vm_size    = "Standard_D2_v2"
+  }
+
+  identity {
+    type = "SystemAssigned"
+  }
+
+  tags = {
+    environment = "production"
+    project     = "sherpany"
+    owner       = "devops"
+  }
+
+  depends_on = [azurerm_resource_group.sherpany_resources, azurerm_log_analytics_workspace.aks]
+}
