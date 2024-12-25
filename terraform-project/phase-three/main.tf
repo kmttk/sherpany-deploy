@@ -1,6 +1,6 @@
 # Resource group
 resource "azurerm_resource_group" "rg" {
-    name     = "ubuntu-vm-rg"
+    name     = "sherpany-vm-rg"
     location = "westeurope"
 }
 
