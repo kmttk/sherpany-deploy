@@ -202,7 +202,7 @@ resource "azurerm_monitor_diagnostic_setting" "aks" {
   depends_on = [azurerm_kubernetes_cluster.sherpany_aks, azurerm_log_analytics_workspace.aks]
 }
 
-Kubernetes Namespace
+#Kubernetes Namespace
 resource "kubernetes_namespace" "sherpany" {
   metadata {
     name = "sherpany"
