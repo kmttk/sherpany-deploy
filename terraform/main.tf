@@ -12,8 +12,8 @@ resource "azurerm_resource_group" "sherpany_resources" {
 # Storage Account for Terraform State
 resource "azurerm_storage_account" "terraform_state_storage" {
   name                     = "sherpanyterraformstate"
-  resource_group_name      = azurerm_resource_group.sherpany_rg.name
-  location                 = azurerm_resource_group.sherpany_rg.location
+  resource_group_name      = azurerm_resource_group.sherpany_resources.name
+  location                 = azurerm_resource_group.sherpany_resources.location
   account_tier             = "Standard"
   account_replication_type = "LRS"
   min_tls_version         = "TLS1_2"
@@ -21,7 +21,7 @@ resource "azurerm_storage_account" "terraform_state_storage" {
   blob_properties {
     versioning_enabled = true
   }
-  depends_on = [azurerm_resource_group.sherpany_rg]
+  depends_on = [azurerm_resource_group.sherpany_resources]
 }
 
 # Storage Container for Terraform State
@@ -35,18 +35,18 @@ resource "azurerm_storage_container" "terraform_state_container" {
 # Container Registry
 resource "azurerm_container_registry" "sherpany_acr" {
   name                = "sherpanyacr"
-  resource_group_name = azurerm_resource_group.sherpany_rg.name
-  location            = azurerm_resource_group.sherpany_rg.location
+  resource_group_name = azurerm_resource_group.sherpany_resources.name
+  location            = azurerm_resource_group.sherpany_resources.location
   sku                = "Basic"
   admin_enabled      = false
-  depends_on         = [azurerm_resource_group.sherpany_rg]
+  depends_on         = [azurerm_resource_group.sherpany_resources]
 }
 
 # Azure Database for PostgreSQL
 resource "azurerm_postgresql_server" "postgres" {
   name                = "sherpany-psql"
-  location            = azurerm_resource_group.sherpany_rg.location
-  resource_group_name = azurerm_resource_group.sherpany_rg.name
+  location            = azurerm_resource_group.sherpany_resources.location
+  resource_group_name = azurerm_resource_group.sherpany_resources.name
 
   administrator_login          = "psqladmin"
   administrator_login_password = "H@Sh1CoR3!"  # Change this in production
@@ -61,13 +61,13 @@ resource "azurerm_postgresql_server" "postgres" {
   public_network_access_enabled = true  # Disable in production
 
   ssl_enforcement_enabled = true
-  depends_on = [azurerm_resource_group.sherpany_rg]
+  depends_on = [azurerm_resource_group.sherpany_resources]
 }
 
 # PostgreSQL Database
 resource "azurerm_postgresql_database" "db" {
   name                = "testdb"
-  resource_group_name = azurerm_resource_group.sherpany_rg.name
+  resource_group_name = azurerm_resource_group.sherpany_resources.name
   server_name         = azurerm_postgresql_server.postgres.name
   charset             = "UTF8"
   collation          = "English_United States.1252"
@@ -77,8 +77,8 @@ resource "azurerm_postgresql_database" "db" {
 # Log Analytics Workspace
 resource "azurerm_log_analytics_workspace" "aks" {
   name                = "sherpany-law"
-  location            = azurerm_resource_group.sherpany_rg.location
-  resource_group_name = azurerm_resource_group.sherpany_rg.name
+  location            = azurerm_resource_group.sherpany_resources.location
+  resource_group_name = azurerm_resource_group.sherpany_resources.name
   sku                = "PerGB2018"
   retention_in_days   = 30
 
@@ -87,15 +87,15 @@ resource "azurerm_log_analytics_workspace" "aks" {
     project     = "sherpany"
     owner       = "devops"
   }
-  depends_on = [azurerm_resource_group.sherpany_rg]
+  depends_on = [azurerm_resource_group.sherpany_resources]
 }
 
 
 # AKS Cluster
 resource "azurerm_kubernetes_cluster" "sherpany_aks" {
   name                = "sherpany-aks"
-  location            = azurerm_resource_group.sherpany_rg.location
-  resource_group_name = azurerm_resource_group.sherpany_rg.name
+  location            = azurerm_resource_group.sherpany_resources.location
+  resource_group_name = azurerm_resource_group.sherpany_resources.name
   dns_prefix          = "sherpanyaks"
   
   network_profile {
@@ -123,13 +123,13 @@ resource "azurerm_kubernetes_cluster" "sherpany_aks" {
     owner       = "devops"
   }
 
-  depends_on = [azurerm_resource_group.sherpany_rg, azurerm_log_analytics_workspace.aks]
+  depends_on = [azurerm_resource_group.sherpany_resources, azurerm_log_analytics_workspace.aks]
 }
 
 # # PostgreSQL Firewall Rule for AKS
 # resource "azurerm_postgresql_firewall_rule" "aks" {
 #   name                = "aks-nodes"
-#   resource_group_name = azurerm_resource_group.sherpany_rg.name
+#   resource_group_name = azurerm_resource_group.sherpany_resources.name
 #   server_name         = azurerm_postgresql_server.postgres.name
 #   start_ip_address    = azurerm_kubernetes_cluster.sherpany_aks.network_profile[0].service_cidr
 #   end_ip_address      = azurerm_kubernetes_cluster.sherpany_aks.network_profile[0].service_cidr
@@ -157,8 +157,8 @@ resource "azurerm_kubernetes_cluster" "sherpany_aks" {
 # # Container Insights Solution
 # resource "azurerm_log_analytics_solution" "container_insights" {
 #   solution_name         = "ContainerInsights"
-#   location             = azurerm_resource_group.sherpany_rg.location
-#   resource_group_name  = azurerm_resource_group.sherpany_rg.name
+#   location             = azurerm_resource_group.sherpany_resources.location
+#   resource_group_name  = azurerm_resource_group.sherpany_resources.name
 #   workspace_resource_id = azurerm_log_analytics_workspace.aks.id
 #   workspace_name       = azurerm_log_analytics_workspace.aks.name
 
