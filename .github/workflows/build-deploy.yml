@@ -33,7 +33,9 @@ jobs:
         run: terraform apply -auto-approve phase1.tfplan
       - name: Capture Output
         id: capture_output
-        run: echo "TERRAFORM_ACCESS_KEY=$(terraform output -raw TERRAFORM_ACCESS_KEY)" >> $GITHUB_ENV
+        run: echo "terraform_access_key=$(terraform output -raw TERRAFORM_ACCESS_KEY)" >> $GITHUB_OUTPUT
+      outputs:
+        terraform_access_key: ${{ steps.capture_output.outputs.terraform_access_key }}
 
   build:
     needs: [deploy-phase1]
@@ -65,9 +67,8 @@ jobs:
     env:
       ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
       ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      ARM_ACCESS_KEY: ${{ needs.deploy-phase1.outputs.terraform_access_key }}
       ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-      ARM_ACCESS_KEY: ${{ needs.deploy-phase1.outputs.TERRAFORM_ACCESS_KEY }}
       TF_VAR_azure_client_id: ${{ secrets.AZURE_CLIENT_ID }}
       TF_VAR_azure_client_secret: ${{ secrets.AZURE_CLIENT_SECRET }}
       TF_VAR_azure_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
