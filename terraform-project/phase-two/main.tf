@@ -83,7 +83,7 @@ resource "azurerm_log_analytics_solution" "container_insights" {
     product   = "OMSGallery/ContainerInsights"
   }
 
-  depends_on = [azurerm_log_analytics_workspace.aks-law]
+  depends_on = [data.azurerm_log_analytics_workspace.aks-law]
 }
 # AKS Diagnostic Settings
 resource "azurerm_monitor_diagnostic_setting" "aks" {
@@ -115,7 +115,7 @@ resource "azurerm_monitor_diagnostic_setting" "aks" {
     category = "AllMetrics"
   }
 
-  depends_on = [azurerm_kubernetes_cluster.sherpany_aks, azurerm_log_analytics_workspace.aks-law]
+  depends_on = [data.azurerm_kubernetes_cluster.sherpany_aks, data.azurerm_log_analytics_workspace.aks-law]
 }
 
 #Kubernetes Namespace
