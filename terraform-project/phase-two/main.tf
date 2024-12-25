@@ -39,13 +39,6 @@ data "azurerm_log_analytics_workspace" "aks-law" {
   resource_group_name = data.azurerm_resource_group.sherpany_resources.name
 }
 
-
-resource "kubernetes_namespace" "monitoring" {
-  metadata {
-    name = "monitoring"
-  }
-}
-
 # PostgreSQL Firewall Rule for AKS
 resource "azurerm_postgresql_firewall_rule" "aks" {
   name                = "aks-nodes"

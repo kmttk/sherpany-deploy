@@ -6,6 +6,7 @@ resource "azurerm_resource_group" "rg" {
 
 # Virtual network and subnet
 resource "azurerm_virtual_network" "vnet" {
+    depends_on          = [azurerm_resource_group.rg]
     name                = "ubuntu-vnet"
     resource_group_name = azurerm_resource_group.rg.name
     location            = azurerm_resource_group.rg.location
@@ -13,14 +14,16 @@ resource "azurerm_virtual_network" "vnet" {
 }
 
 resource "azurerm_subnet" "subnet" {
-    name                 = "ubuntu-subnet"
-    resource_group_name  = azurerm_resource_group.rg.name
-    virtual_network_name = azurerm_virtual_network.vnet.name
-    address_prefixes     = ["10.0.1.0/24"]
+    depends_on             = [azurerm_virtual_network.vnet]
+    name                   = "ubuntu-subnet"
+    resource_group_name    = azurerm_resource_group.rg.name
+    virtual_network_name   = azurerm_virtual_network.vnet.name
+    address_prefixes       = ["10.0.1.0/24"]
 }
 
 # Network Security Group
 resource "azurerm_network_security_group" "nsg" {
+    depends_on          = [azurerm_resource_group.rg]
     name                = "ubuntu-nsg"
     location            = azurerm_resource_group.rg.location
     resource_group_name = azurerm_resource_group.rg.name
@@ -31,29 +34,32 @@ resource "azurerm_network_security_group" "nsg" {
         direction                  = "Inbound"
         access                     = "Allow"
         protocol                   = "Tcp"
-        source_port_range         = "*"
+        source_port_range          = "*"
         destination_port_range     = "22"
         source_address_prefix      = "*"
         destination_address_prefix = "*"
     }
 }
 
+# NSG rule
 resource "azurerm_network_security_rule" "metrics" {
-  name                        = "metrics"
-  priority                    = 1003
-  direction                   = "Inbound"
-  access                      = "Allow"
-  protocol                    = "Tcp"
-  source_port_range          = "*"
-  destination_port_range     = "9100"
-  source_address_prefix      = "*"
-  destination_address_prefix = "*"
-  resource_group_name         = azurerm_resource_group.sherpany_resources.name
-  network_security_group_name = azurerm_network_security_group.vm_nsg.name
+    depends_on                 = [azurerm_network_security_group.nsg]
+    name                       = "metrics"
+    priority                   = 1003
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "9100"
+    source_address_prefix      = "*"
+    destination_address_prefix = "*"
+    resource_group_name        = azurerm_resource_group.rg.name
+    network_security_group_name = azurerm_network_security_group.nsg.name
 }
 
 # Public IP
 resource "azurerm_public_ip" "pip" {
+    depends_on          = [azurerm_resource_group.rg]
     name                = "ubuntu-pip"
     location            = azurerm_resource_group.rg.location
     resource_group_name = azurerm_resource_group.rg.name
@@ -62,6 +68,7 @@ resource "azurerm_public_ip" "pip" {
 
 # Network Interface
 resource "azurerm_network_interface" "nic" {
+    depends_on          = [azurerm_subnet.subnet, azurerm_public_ip.pip, azurerm_network_security_group.nsg]
     name                = "ubuntu-nic"
     location            = azurerm_resource_group.rg.location
     resource_group_name = azurerm_resource_group.rg.name
@@ -70,21 +77,27 @@ resource "azurerm_network_interface" "nic" {
         name                          = "internal"
         subnet_id                     = azurerm_subnet.subnet.id
         private_ip_address_allocation = "Dynamic"
-        public_ip_address_id         = azurerm_public_ip.pip.id
+        public_ip_address_id          = azurerm_public_ip.pip.id
     }
 }
 
 # Storage Account for logs
 resource "azurerm_storage_account" "logs" {
-    name                     = "ubuntulogstorage"
-    resource_group_name      = azurerm_resource_group.rg.name
-    location                 = azurerm_resource_group.rg.location
-    account_tier             = "Standard"
+    depends_on          = [azurerm_resource_group.rg]
+    name                = "ubuntulogstorage"
+    resource_group_name = azurerm_resource_group.rg.name
+    location            = azurerm_resource_group.rg.location
+    account_tier        = "Standard"
     account_replication_type = "LRS"
 }
 
 # Virtual Machine
 resource "azurerm_linux_virtual_machine" "vm" {
+    depends_on = [
+        azurerm_network_interface.nic,
+        azurerm_storage_account.logs
+    ]
+
     name                = "ubuntu-vm"
     resource_group_name = azurerm_resource_group.rg.name
     location            = azurerm_resource_group.rg.location
@@ -93,9 +106,7 @@ resource "azurerm_linux_virtual_machine" "vm" {
     admin_password      = var.azure_linux_vm_secret
     disable_password_authentication = false
 
-    network_interface_ids = [
-        azurerm_network_interface.nic.id,
-    ]
+    network_interface_ids = [azurerm_network_interface.nic.id]
 
     os_disk {
         caching              = "ReadWrite"
@@ -108,43 +119,34 @@ resource "azurerm_linux_virtual_machine" "vm" {
         sku       = "22_04-lts"
         version   = "latest"
     }
+
     boot_diagnostics {
         storage_account_uri = azurerm_storage_account.logs.primary_blob_endpoint
     }
-custom_data = base64encode(<<-EOF
-    #!/bin/bash
-    
-    # Add Grafana GPG key and repository
-    wget -q -O - https://apt.grafana.com/gpg.key | sudo apt-key add -
-    echo "deb https://apt.grafana.com stable main" | sudo tee /etc/apt/sources.list.d/grafana.list
-    
-    # Update and install
-    apt-get update
-    apt-get install -y grafana-agent
 
-    # Create agent config
-    cat > /etc/grafana-agent.yaml <<'EOL'
-    server:
-      log_level: info
-
-    metrics:
-      global:
-        scrape_interval: 15s
-        remote_write:
-          - url: "http://prometheus-server.monitoring.svc.cluster.local:9090/api/v1/write"
-      
-      configs:
-        - name: node_metrics
-          scrape_configs:
-            - job_name: node
-              static_configs:
-                - targets: ['localhost:9100']
-EOL
-
-    # Enable and start service
-    systemctl enable grafana-agent
-    systemctl start grafana-agent
-  EOF
-  )
+    custom_data = base64encode(<<-EOF
+        #!/bin/bash
+        wget -q -O - https://apt.grafana.com/gpg.key | sudo apt-key add -
+        echo "deb https://apt.grafana.com stable main" | sudo tee /etc/apt/sources.list.d/grafana.list
+        apt-get update
+        apt-get install -y grafana-agent
+        cat > /etc/grafana-agent.yaml <<'EOL'
+        server:
+            log_level: info
+        metrics:
+            global:
+                scrape_interval: 15s
+                remote_write:
+                    - url: "http://prometheus-server.monitoring.svc.cluster.local:9090/api/v1/write"
+            configs:
+                - name: node_metrics
+                    scrape_configs:
+                        - job_name: node
+                            static_configs:
+                                - targets: ['localhost:9100']
+        EOL
+        systemctl enable grafana-agent
+        systemctl start grafana-agent
+    EOF
+    )
 }
-
