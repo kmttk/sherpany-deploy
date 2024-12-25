@@ -63,7 +63,8 @@ jobs:
           TF_VAR_azure_client_secret: ${{ secrets.AZURE_CLIENT_SECRET }}
           TF_VAR_azure_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
         run: |
-          terraform init
+          terraform init /
+            -reconfigure /
           # -backend-config="storage_account_name=${{ secrets.TERRAFORM_STORAGE_ACCOUNT }}" \
           # -backend-config="container_name=${{ secrets.TERRAFORM_CONTAINER }}" \
           # -backend-config="key=terraform.tfstate" \
