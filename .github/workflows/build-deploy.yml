@@ -75,7 +75,7 @@ jobs:
           TF_VAR_azure_client_id: ${{ secrets.AZURE_CLIENT_ID }}
           TF_VAR_azure_client_secret: ${{ secrets.AZURE_CLIENT_SECRET }}
           TF_VAR_azure_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
-        run: terraform plan -out=tfplan
+        run: terraform plan -out=main.tfplan
       
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main'
@@ -84,4 +84,4 @@ jobs:
           TF_VAR_azure_client_id: ${{ secrets.AZURE_CLIENT_ID }}
           TF_VAR_azure_client_secret: ${{ secrets.AZURE_CLIENT_SECRET }}
           TF_VAR_azure_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
-        run: terraform apply -auto-approve tfplan
+        run: terraform apply -auto-approve main.tfplan
