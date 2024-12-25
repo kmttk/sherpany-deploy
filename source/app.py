@@ -4,6 +4,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from prometheus_client import Counter, Histogram, generate_latest
 import time
+import ssl
 
 app = Flask(__name__)
 
@@ -13,12 +14,18 @@ http_request_duration_seconds = Histogram('http_request_duration_seconds', 'HTTP
 db_query_duration_seconds = Histogram('db_query_duration_seconds', 'Database query duration')
 
 def get_db_connection():
+    # Create SSL context for Azure PostgreSQL
+    ssl_context = ssl.create_default_context()
+    ssl_context.verify_mode = ssl.CERT_REQUIRED
+
     conn = psycopg2.connect(
-        host=os.getenv('DB_HOST', 'localhost'),
+        host=os.getenv('DB_HOST'),
         port=os.getenv('DB_PORT', '5432'),
-        dbname=os.getenv('DB_NAME', 'testdb'),
-        user=os.getenv('DB_USER', 'postgres'),
-        password=os.getenv('DB_PASSWORD', 'postgres')
+        dbname=os.getenv('DB_NAME'),
+        user=os.getenv('DB_USER'),
+        password=os.getenv('DB_PASSWORD'),
+        sslmode='require',
+        sslcert=None
     )
     return conn
 
@@ -46,8 +53,8 @@ def health_check():
         conn = get_db_connection()
         conn.close()
         return jsonify({"status": "healthy"})
-    except:
-        return jsonify({"status": "unhealthy"}), 500
+    except Exception as e:
+        return jsonify({"status": "unhealthy", "error": str(e)}), 500
 
 @app.route('/metrics')
 def metrics():
