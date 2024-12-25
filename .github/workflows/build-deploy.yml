@@ -34,8 +34,8 @@ jobs:
       - name: Capture Output
         id: capture_output
         run: echo "terraform_access_key=$(terraform output -raw TERRAFORM_ACCESS_KEY)" >> $GITHUB_OUTPUT
-      outputs:
-        terraform_access_key: ${{ steps.capture_output.outputs.terraform_access_key }}
+    outputs:
+      terraform_access_key: ${{ steps.capture_output.outputs.terraform_access_key }}
 
   build:
     needs: [deploy-phase1]
