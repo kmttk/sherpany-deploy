@@ -35,7 +35,7 @@ data "azurerm_postgresql_database" "db" {
 }
 
 # Log Analytics Workspace
-data "azurerm_log_analytics_workspace" "aks" {
+data "azurerm_log_analytics_workspace" "aks-law" {
   name                = "sherpany-law"
   resource_group_name = data.azurerm_resource_group.sherpany_resources.name
 }

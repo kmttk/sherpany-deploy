@@ -70,26 +70,46 @@ jobs:
       TF_VAR_azure_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
     steps:
       - uses: actions/checkout@v3
+      
       - name: Azure Login
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
-      - name: Get Storage Account primary key via az cli
-        id: get-key
-        run: echo "::set-output name=ARM_ACCESS_KEY::$(az storage account keys list --resource-group sherpany-resources --account-name sherpanyterraformstate --query [0].value -o tsv)"
+      
+      - name: Get Storage Account Key
+        id: get-storage-key
+        run: |
+          STORAGE_KEY=$(az storage account keys list \
+            --resource-group sherpany-resources \
+            --account-name sherpanyterraformstate \
+            --query [0].value -o tsv)
+          echo "ARM_ACCESS_KEY=$STORAGE_KEY" >> $GITHUB_ENV
+      
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+      
+      - name: Get AKS Credentials
+        run: |
+          az aks get-credentials \
+            --resource-group sherpany-resources \
+            --name sherpany-aks \
+            --overwrite-existing
+      
+      - name: Login to ACR
+        run: az acr login --name ${{ secrets.ACR_NAME }}
+      
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.10.3
-      - name: Terraform Init Phase 2
+      
+      - name: Terraform Init
         run: |
           terraform init \
             -backend-config="resource_group_name=sherpany-resources" \
             -backend-config="storage_account_name=sherpanyterraformstate" \
             -backend-config="container_name=tfstate" \
-            -backend-config="key=terraform-phase2.tfstate"
-      - name: Terraform Plan Phase 2
-        run: terraform plan -out=phase2.tfplan
-      - name: Terraform Apply Phase 2
-        if: github.ref == 'refs/heads/main'
-        run: terraform apply -auto-approve phase2.tfplan
+            -backend-config="key=terraform.tfstate"
+      
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
