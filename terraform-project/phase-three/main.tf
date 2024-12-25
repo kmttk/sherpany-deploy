@@ -90,11 +90,10 @@ resource "azurerm_linux_virtual_machine" "vm" {
 
     source_image_reference {
         publisher = "Canonical"
-        offer     = "UbuntuServer"
-        sku       = "20_04-lts"
+        offer     = "0001-com-ubuntu-server-jammy"
+        sku       = "22_04-lts"
         version   = "latest"
     }
-
     boot_diagnostics {
         storage_account_uri = azurerm_storage_account.logs.primary_blob_endpoint
     }

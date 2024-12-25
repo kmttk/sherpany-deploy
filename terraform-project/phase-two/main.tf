@@ -123,7 +123,7 @@ resource "kubernetes_namespace" "sherpany" {
   metadata {
     name = "sherpany"
   }
-  depends_on = [azurerm_kubernetes_cluster.sherpany_aks]
+  depends_on = [data.azurerm_kubernetes_cluster.sherpany_aks]
 }
 
 # Database Connection Secret
