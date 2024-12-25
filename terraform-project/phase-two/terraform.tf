@@ -9,5 +9,6 @@ terraform {
       version = "~> 2.0"
     }
   }
-  backend "azurerm" {}  # Empty config, will be filled by CLI arguments
+  
+  backend "azurerm" {}  # Empty block - configuration provided via CLI
 }
