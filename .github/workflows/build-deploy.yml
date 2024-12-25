@@ -1,0 +1,73 @@
+name: Phase 1 and Phase 2 Deployment
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy-phase1:
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./terraform-project/phase-one
+    steps:
+      - uses: actions/checkout@v3
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.10.3
+      - name: Terraform Init Phase 1
+        run: terraform init
+      - name: Terraform Plan Phase 1
+        run: terraform plan -out=phase1.tfplan
+      - name: Terraform Apply Phase 1
+        if: github.ref == 'refs/heads/main'
+        run: terraform apply -auto-approve phase1.tfplan
+
+  build:
+    needs: [deploy-phase1]
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Build and Push Docker Image
+        run: |
+          TIMESTAMP=$(date +%Y%m%d%H%M%S)
+          IMAGE_TAG="${{ secrets.ACR_NAME }}.azurecr.io/flask-app"
+          az acr login --name ${{ secrets.ACR_NAME }}
+          cd source
+          docker build -t ${IMAGE_TAG}:${TIMESTAMP} -t ${IMAGE_TAG}:latest .
+          docker push ${IMAGE_TAG}:${TIMESTAMP}
+          docker push ${IMAGE_TAG}:latest
+
+  deploy-phase2:
+    needs: [build]
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./terraform-project/phase-two
+    steps:
+      - uses: actions/checkout@v3
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.10.3
+      - name: Terraform Init Phase 2
+        run: terraform init
+      - name: Terraform Plan Phase 2
+        run: terraform plan -out=phase2.tfplan
+      - name: Terraform Apply Phase 2
+        if: github.ref == 'refs/heads/main'
+        run: terraform apply -auto-approve phase2.tfplan
