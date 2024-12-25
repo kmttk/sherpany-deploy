@@ -64,7 +64,6 @@ jobs:
           TF_VAR_azure_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
         run: |
           terraform init
-          terraform import azurerm_resource_group.sherpany_rg "/subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/sherpany-rg"
           # -backend-config="storage_account_name=${{ secrets.TERRAFORM_STORAGE_ACCOUNT }}" \
           # -backend-config="container_name=${{ secrets.TERRAFORM_CONTAINER }}" \
           # -backend-config="key=terraform.tfstate" \
@@ -76,7 +75,7 @@ jobs:
           TF_VAR_azure_client_id: ${{ secrets.AZURE_CLIENT_ID }}
           TF_VAR_azure_client_secret: ${{ secrets.AZURE_CLIENT_SECRET }}
           TF_VAR_azure_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
-        run: terraform plan -out=tfplan -lock=false
+        run: terraform plan -out=tfplan
       
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main'
@@ -85,4 +84,4 @@ jobs:
           TF_VAR_azure_client_id: ${{ secrets.AZURE_CLIENT_ID }}
           TF_VAR_azure_client_secret: ${{ secrets.AZURE_CLIENT_SECRET }}
           TF_VAR_azure_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
-        run: terraform apply -lock=false -auto-approve tfplan
+        run: terraform apply -auto-approve tfplan
