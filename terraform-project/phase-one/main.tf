@@ -111,7 +111,7 @@ resource "azurerm_kubernetes_cluster" "sherpany_aks" {
   }
 
   oms_agent {
-    log_analytics_workspace_id = azurerm_log_analytics_workspace.aks.id
+    log_analytics_workspace_id = azurerm_log_analytics_workspace.aks-law.id
   }
 
   default_node_pool {
@@ -130,5 +130,5 @@ resource "azurerm_kubernetes_cluster" "sherpany_aks" {
     owner       = "devops"
   }
 
-  depends_on = [azurerm_resource_group.sherpany_resources, azurerm_log_analytics_workspace.aks]
+  depends_on = [azurerm_resource_group.sherpany_resources, azurerm_log_analytics_workspace.aks-law]
 }

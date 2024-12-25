@@ -75,7 +75,7 @@ resource "azurerm_log_analytics_solution" "container_insights" {
   solution_name         = "ContainerInsights"
   location             = data.azurerm_resource_group.sherpany_resources.location
   resource_group_name  = data.azurerm_resource_group.sherpany_resources.name
-  workspace_resource_id = data.azurerm_log_analytics_workspace.aks.id
+  workspace_resource_id = data.azurerm_log_analytics_workspace.aks-law.id
   workspace_name       = data.azurerm_log_analytics_workspace.aks.name
 
   plan {
@@ -83,13 +83,13 @@ resource "azurerm_log_analytics_solution" "container_insights" {
     product   = "OMSGallery/ContainerInsights"
   }
 
-  depends_on = [azurerm_log_analytics_workspace.aks]
+  depends_on = [azurerm_log_analytics_workspace.aks-law]
 }
 # AKS Diagnostic Settings
 resource "azurerm_monitor_diagnostic_setting" "aks" {
   name                       = "aks-diagnostics"
   target_resource_id        = data.azurerm_kubernetes_cluster.aks.id
-  log_analytics_workspace_id = data.azurerm_log_analytics_workspace.aks.id
+  log_analytics_workspace_id = data.azurerm_log_analytics_workspace.aks-law.id
 
   enabled_log {
     category = "kube-apiserver"
@@ -115,7 +115,7 @@ resource "azurerm_monitor_diagnostic_setting" "aks" {
     category = "AllMetrics"
   }
 
-  depends_on = [azurerm_kubernetes_cluster.sherpany_aks, azurerm_log_analytics_workspace.aks]
+  depends_on = [azurerm_kubernetes_cluster.sherpany_aks, azurerm_log_analytics_workspace.aks-law]
 }
 
 #Kubernetes Namespace
