@@ -67,8 +67,8 @@ resource "azurerm_postgresql_server" "postgres" {
 # PostgreSQL Database
 resource "azurerm_postgresql_database" "db" {
   name                = "testdb"
-  resource_group_name = data.azurerm_resource_group.sherpany_resources.name
-  server_name         = data.azurerm_postgresql_server.postgres.name
+  resource_group_name = azurerm_resource_group.sherpany_resources.name
+  server_name         = azurerm_postgresql_server.postgres.name
   charset             = "UTF8"
   collation           = "English_United States.1252"
 
