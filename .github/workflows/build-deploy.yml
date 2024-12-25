@@ -111,5 +111,9 @@ jobs:
             -backend-config="container_name=tfstate" \
             -backend-config="key=terraform.tfstate"
       
-      - name: Terraform Apply
-        run: terraform apply -auto-approve
+      - name: Terraform Plan Phase 1
+        run: terraform plan -out=phase2.tfplan
+
+      - name: Terraform Apply Phase 1
+        if: github.ref == 'refs/heads/main'
+        run: terraform apply -auto-approve phase2.tfplan
