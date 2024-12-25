@@ -97,7 +97,7 @@ data "azurerm_storage_account" "terraform_state_storage" {
   depends_on          = [azurerm_storage_account.terraform_state_storage]
 }
 
-output "TERRAFORM_STORAGE_ACCOUNT" {
+output "TERRAFORM_ACCESS_KEY" {
   value     = data.azurerm_storage_account.terraform_state_storage.primary_access_key
   sensitive = true
 }
