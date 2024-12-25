@@ -257,6 +257,12 @@ resource "helm_release" "prometheus" {
     prometheus:
       prometheusSpec:
         serviceMonitorSelector: {}
+        additionalScrapeConfigs:
+          - job_name: 'vm-node-exporter'
+            static_configs:
+              - targets: ['${data.azurerm_public_ip.sherpany_vm_ip.ip_address}:9100']
+            metrics_path: '/metrics'
+            scheme: 'http'
     EOT
   ]
 
@@ -270,7 +276,7 @@ resource "helm_release" "prometheus" {
     value = "ClusterIP"
   }
 
-  depends_on = [helm_release.prometheus]
+  depends_on = [kubernetes_namespace.monitoring]
 }
 
 resource "kubernetes_manifest" "flask_service_monitor" {
@@ -292,9 +298,9 @@ resource "kubernetes_manifest" "flask_service_monitor" {
       }
       endpoints = [
         {
-          port   = "http"
-          path   = "/metrics"
-          interval = "15s"
+          port        = "http"
+          path        = "/metrics"
+          interval    = "15s"
           scrapeTimeout = "10s"
         }
       ]
@@ -303,3 +309,7 @@ resource "kubernetes_manifest" "flask_service_monitor" {
   depends_on = [helm_release.prometheus]
 }
 
+data "azurerm_public_ip" "sherpany_vm_ip" {
+  name                = "sherpany-ip"
+  resource_group_name = data.azurerm_resource_group.sherpany_resources.name
+}
