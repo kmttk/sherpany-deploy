@@ -4,11 +4,16 @@ on:
 
 jobs:
   deploy-phase1:
-    timeout-minutes: 10
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     defaults:
       run:
         working-directory: ./terraform-project/phase-one
+    env:
+      TF_VAR_azure_client_id: ${{ secrets.AZURE_CLIENT_ID }}
+      TF_VAR_azure_client_secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+      TF_VAR_azure_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      TF_VAR_azure_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
     steps:
       - uses: actions/checkout@v3
       - name: Azure Login
@@ -20,30 +25,11 @@ jobs:
         with:
           terraform_version: 1.10.3
       - name: Terraform Init Phase 1
-        env:
-          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          TF_VAR_azure_client_id: ${{ secrets.AZURE_CLIENT_ID }}
-          TF_VAR_azure_client_secret: ${{ secrets.AZURE_CLIENT_SECRET }}
-          TF_VAR_azure_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          TF_VAR_azure_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
         run: terraform init
       - name: Terraform Plan Phase 1
-        env:
-          TF_VAR_azure_client_id: ${{ secrets.AZURE_CLIENT_ID }}
-          TF_VAR_azure_client_secret: ${{ secrets.AZURE_CLIENT_SECRET }}
-          TF_VAR_azure_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          TF_VAR_azure_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
         run: terraform plan -out=phase1.tfplan
       - name: Terraform Apply Phase 1
         if: github.ref == 'refs/heads/main'
-        env:
-          TF_VAR_azure_client_id: ${{ secrets.AZURE_CLIENT_ID }}
-          TF_VAR_azure_client_secret: ${{ secrets.AZURE_CLIENT_SECRET }}
-          TF_VAR_azure_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          TF_VAR_azure_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
         run: terraform apply -auto-approve phase1.tfplan
 
   build:
@@ -68,11 +54,17 @@ jobs:
 
   deploy-phase2:
     needs: [build]
-    timeout-minutes: 10
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     defaults:
       run:
         working-directory: ./terraform-project/phase-two
+    env:
+      TF_VAR_azure_client_id: ${{ secrets.AZURE_CLIENT_ID }}
+      TF_VAR_azure_client_secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+      TF_VAR_azure_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      TF_VAR_azure_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+      ARM_ACCESS_KEY: ${{ secrets.TERRAFORM_ACCESS_KEY }}
     steps:
       - uses: actions/checkout@v3
       - name: Azure Login
@@ -84,16 +76,6 @@ jobs:
         with:
           terraform_version: 1.10.3
       - name: Terraform Init Phase 2
-        env:
-          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          ARM_ACCESS_KEY: ${{ secrets.TERRAFORM_ACCESS_KEY }}
-          TF_VAR_azure_client_id: ${{ secrets.AZURE_CLIENT_ID }}
-          TF_VAR_azure_client_secret: ${{ secrets.AZURE_CLIENT_SECRET }}
-          TF_VAR_azure_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          TF_VAR_azure_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
         run: |
           terraform init \
             -backend-config="resource_group_name=sherpany-resources" \
@@ -101,27 +83,7 @@ jobs:
             -backend-config="container_name=tfstate" \
             -backend-config="key=terraform-phase2.tfstate"
       - name: Terraform Plan Phase 2
-        env:
-          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          ARM_ACCESS_KEY: ${{ secrets.TERRAFORM_ACCESS_KEY }}
-          TF_VAR_azure_client_id: ${{ secrets.AZURE_CLIENT_ID }}
-          TF_VAR_azure_client_secret: ${{ secrets.AZURE_CLIENT_SECRET }}
-          TF_VAR_azure_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          TF_VAR_azure_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
         run: terraform plan -out=phase2.tfplan
       - name: Terraform Apply Phase 2
         if: github.ref == 'refs/heads/main'
-        env:
-          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          ARM_ACCESS_KEY: ${{ secrets.TERRAFORM_ACCESS_KEY }}
-          TF_VAR_azure_client_id: ${{ secrets.AZURE_CLIENT_ID }}
-          TF_VAR_azure_client_secret: ${{ secrets.AZURE_CLIENT_SECRET }}
-          TF_VAR_azure_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          TF_VAR_azure_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
         run: terraform apply -auto-approve phase2.tfplan
