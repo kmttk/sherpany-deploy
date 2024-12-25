@@ -1,1 +1,33 @@
-1
+name: Create Linux VM
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy-phase1:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: ./terraform-project/phase-three
+    env:
+      TF_VAR_azure_client_id: ${{ secrets.AZURE_CLIENT_ID }}
+      TF_VAR_azure_client_secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+      TF_VAR_azure_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      TF_VAR_azure_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.10.3
+      - name: Terraform Init Phase 3
+        run: terraform init
+      - name: Terraform Plan Phase 3
+        run: terraform plan -out=phase3.tfplan
+      - name: Terraform Apply Phase 3
+        if: github.ref == 'refs/heads/main'
+        run: terraform apply -auto-approve phase3.tfplan
