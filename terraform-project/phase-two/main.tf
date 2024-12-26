@@ -20,19 +20,6 @@ data "azurerm_container_registry" "sherpany_acr" {
   resource_group_name = data.azurerm_resource_group.sherpany_resources.name
 }
 
-# PostgreSQL Server
-data "azurerm_postgresql_server" "postgres" {
-  name                = "sherpany-psql"
-  resource_group_name = data.azurerm_resource_group.sherpany_resources.name
-}
-
-# PostgreSQL Database
-data "azurerm_postgresql_database" "db" {
-  name                = "testdb"
-  resource_group_name = data.azurerm_resource_group.sherpany_resources.name
-  server_name         = data.azurerm_postgresql_server.postgres.name
-}
-
 # AKS Cluster data source
 data "azurerm_kubernetes_cluster" "sherpany_aks" {
   name                = "sherpany-aks"
@@ -45,30 +32,61 @@ data "azurerm_log_analytics_workspace" "aks-law" {
   resource_group_name = data.azurerm_resource_group.sherpany_resources.name
 }
 
+# Azure Database for PostgreSQL
+resource "azurerm_postgresql_server" "postgres" {
+  name                = "sherpany-psql"
+  location            = azurerm_resource_group.sherpany_resources.location
+  resource_group_name = azurerm_resource_group.sherpany_resources.name
+
+  administrator_login          = "psqladmin"
+  administrator_login_password = "H@Sh1CoR3!"  # Change this in production
+
+  sku_name   = "GP_Gen5_2"
+  version    = "11"
+  storage_mb = 5120
+
+  backup_retention_days        = 7
+  geo_redundant_backup_enabled = false
+  auto_grow_enabled           = true
+  public_network_access_enabled = true  # Disable in production
+
+  ssl_enforcement_enabled = true
+  depends_on = [data.azurerm_resource_group.sherpany_resources]
+}
+
+# Change from data to resource for PostgreSQL Database
+resource "azurerm_postgresql_database" "db" {
+  name                = "testdb"
+  resource_group_name = azurerm_resource_group.sherpany_resources.name
+  server_name         = azurerm_postgresql_server.postgres.name
+  charset             = "UTF8"
+  collation           = "English_United States.1252"
+  depends_on          = [ azurerm_postgresql_server.postgres ]
+}
+
+
 resource "azurerm_postgresql_firewall_rule" "aks_firewall_rule" {
   name                = "aks_firewall_rule"
   resource_group_name = data.azurerm_resource_group.sherpany_resources.name
-  server_name         = data.azurerm_postgresql_server.postgres.name
+  server_name         = azurerm_postgresql_server.postgres.name
   start_ip_address    = data.azurerm_kubernetes_cluster.sherpany_aks.network_profile[0].service_cidr
   end_ip_address      = data.azurerm_kubernetes_cluster.sherpany_aks.network_profile[0].service_cidr
+  depends_on          = [ azurerm_postgresql_database.db ]
 }
 # Initialize Database Schema
 resource "null_resource" "db_setup" {
   provisioner "local-exec" {
     command = <<-EOT
-      PGPASSWORD=${data.azurerm_postgresql_server.postgres.administrator_login_password} psql \
-      -h ${data.azurerm_postgresql_server.postgres.fqdn} \
+      PGPASSWORD=${azurerm_postgresql_server.postgres.administrator_login_password} psql \
+      -h ${azurerm_postgresql_server.postgres.fqdn} \
       -p 5432 \
-      -U ${data.azurerm_postgresql_server.postgres.administrator_login}@${data.azurerm_postgresql_server.postgres.name} \
-      -d ${data.azurerm_postgresql_database.db.name} \
+      -U ${azurerm_postgresql_server.postgres.administrator_login}@${data.azurerm_postgresql_server.postgres.name} \
+      -d ${azurerm_postgresql_database.db.name} \
       -f ${path.module}/../../source/init.sql
     EOT
   }
 
-  depends_on = [
-    data.azurerm_postgresql_database.db,
-    azurerm_postgresql_firewall_rule.aks_firewall_rule
-  ]
+  depends_on = [azurerm_postgresql_firewall_rule.aks_firewall_rule]
 }
 
 # Container Insights Solution
@@ -237,7 +255,7 @@ resource "kubernetes_service" "flask_service" {
 
     type = "LoadBalancer"
   }
-  depends_on = [kubernetes_deployment.flask_app]
+  depends_on = [kubernetes_secret.postgres_secret]
 }
 
 resource "kubernetes_namespace" "monitoring" {
@@ -245,7 +263,7 @@ resource "kubernetes_namespace" "monitoring" {
     name = "monitoring"
     
   }
-  depends_on = [kubernete_service.flask_service]
+  depends_on = [data.azurerm_kubernetes_cluster.sherpany_aks]
   }
 
 resource "helm_release" "prometheus" {
@@ -354,7 +372,16 @@ resource "helm_release" "grafana" {
   ]
 }
 
-# Optional: Output the LoadBalancer IP
-output "grafana_ip" {
-  value = kubernetes_service.grafana_lb.status[0].load_balancer[0].ingress[0].ip
+data "kubernetes_service" "grafana" {
+  metadata {
+    name      = "grafana"
+    namespace = kubernetes_namespace.monitoring.metadata[0].name
+  }
+  depends_on = [helm_release.grafana]
+}
+
+output "grafana_url" {
+  value       = "http://${data.kubernetes_service.grafana.status[0].load_balancer[0].ingress[0].ip}:3000"
+  description = "URL to access Grafana dashboard"
+  depends_on  = [helm_release.grafana]
 }

@@ -42,37 +42,6 @@ resource "azurerm_container_registry" "sherpany_acr" {
   depends_on         = [azurerm_resource_group.sherpany_resources]
 }
 
-# Azure Database for PostgreSQL
-resource "azurerm_postgresql_server" "postgres" {
-  name                = "sherpany-psql"
-  location            = azurerm_resource_group.sherpany_resources.location
-  resource_group_name = azurerm_resource_group.sherpany_resources.name
-
-  administrator_login          = "psqladmin"
-  administrator_login_password = "H@Sh1CoR3!"  # Change this in production
-
-  sku_name   = "GP_Gen5_2"
-  version    = "11"
-  storage_mb = 5120
-
-  backup_retention_days        = 7
-  geo_redundant_backup_enabled = false
-  auto_grow_enabled           = true
-  public_network_access_enabled = true  # Disable in production
-
-  ssl_enforcement_enabled = true
-  depends_on = [azurerm_resource_group.sherpany_resources]
-}
-
-# Change from data to resource for PostgreSQL Database
-resource "azurerm_postgresql_database" "db" {
-  name                = "testdb"
-  resource_group_name = azurerm_resource_group.sherpany_resources.name
-  server_name         = azurerm_postgresql_server.postgres.name
-  charset             = "UTF8"
-  collation          = "English_United States.1252"
-}
-
 # Log Analytics Workspace
 resource "azurerm_log_analytics_workspace" "aks-law" {
   name                = "sherpany-law"
