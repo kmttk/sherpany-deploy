@@ -25,11 +25,11 @@ jobs:
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.10.3
-      - name: Terraform Init Phase 3
+      - name: Terraform Init Phase 0
         run: terraform init
-      - name: Terraform Plan Phase 3
+      - name: Terraform Plan Phase 0
         run: terraform plan -out=phase3.tfplan
-      - name: Terraform Apply Phase 3
+      - name: Terraform Apply Phase 0
         if: github.ref == 'refs/heads/main'
         run: terraform apply -auto-approve phase3.tfplan
 
