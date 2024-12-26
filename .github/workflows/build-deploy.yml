@@ -8,7 +8,7 @@ jobs:
     timeout-minutes: 10
     defaults:
       run:
-        working-directory: ./terraform-project/phase-zero
+        working-directory: ./terraform-project/phase-0
     env:
       TF_VAR_azure_client_id: ${{ secrets.AZURE_CLIENT_ID }}
       TF_VAR_azure_client_secret: ${{ secrets.AZURE_CLIENT_SECRET }}
