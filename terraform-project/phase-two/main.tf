@@ -324,11 +324,16 @@ resource "helm_release" "grafana" {
   repository = "https://grafana.github.io/helm-charts"
   chart      = "grafana"
   namespace  = kubernetes_namespace.monitoring.metadata[0].name
-  version    = "6.52.0"
+  version    = "7.0.3"
 
   set {
     name  = "service.type"
     value = "LoadBalancer"
+  }
+
+  set {
+    name  = "adminPassword"
+    value = "admin321"  # Change this to a secure password
   }
 
   set {
@@ -348,4 +353,9 @@ resource "helm_release" "grafana" {
     helm_release.prometheus,
     kubernetes_namespace.monitoring
   ]
+}
+
+# Optional: Output the LoadBalancer IP
+output "grafana_ip" {
+  value = kubernetes_service.grafana_lb.status[0].load_balancer[0].ingress[0].ip
 }
