@@ -7,6 +7,11 @@ data "azurerm_kubernetes_cluster" "sherpany_aks" {
   resource_group_name = data.azurerm_resource_group.sherpany_resources.name
 }
 
+data "azurerm_public_ip" "vm_pip" {
+  name                = "sherpany-ip"
+  resource_group_name = data.azurerm_resource_group.vm_rg.name
+}
+
 resource "kubernetes_namespace" "monitoring" {
   metadata {
     name = "monitoring"
@@ -39,7 +44,7 @@ resource "helm_release" "prometheus" {
         additionalScrapeConfigs:
           - job_name: 'vm-node-exporter'
             static_configs:
-              - targets: ['${data.terraform_remote_state.phase_zero.outputs.vm_public_ip}:9100']
+              - targets: ['${data.azurerm_public_ip.vm_pip.ip_address}:9100']
             metrics_path: '/metrics'
             scheme: 'http'
     EOT
