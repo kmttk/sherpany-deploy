@@ -35,8 +35,8 @@ data "azurerm_log_analytics_workspace" "aks-law" {
 # Azure Database for PostgreSQL
 resource "azurerm_postgresql_server" "postgres" {
   name                = "sherpany-psql"
-  location            = azurerm_resource_group.sherpany_resources.location
-  resource_group_name = azurerm_resource_group.sherpany_resources.name
+  location            = data.azurerm_resource_group.sherpany_resources.location
+  resource_group_name = data.azurerm_resource_group.sherpany_resources.name
 
   administrator_login          = "psqladmin"
   administrator_login_password = "H@Sh1CoR3!"  # Change this in production
@@ -154,10 +154,10 @@ resource "kubernetes_secret" "postgres_secret" {
   }
 
   data = {
-    DB_HOST     = data.azurerm_postgresql_server.postgres.fqdn
-    DB_NAME     = data.azurerm_postgresql_database.db.name
-    DB_USER     = "${data.azurerm_postgresql_server.postgres.administrator_login}@${data.azurerm_postgresql_server.postgres.name}"
-    DB_PASSWORD = data.azurerm_postgresql_server.postgres.administrator_login_password
+    DB_HOST     = azurerm_postgresql_server.postgres.fqdn
+    DB_NAME     = azurerm_postgresql_database.db.name
+    DB_USER     = "${azurerm_postgresql_server.postgres.administrator_login}@${azurerm_postgresql_server.postgres.name}"
+    DB_PASSWORD = azurerm_postgresql_server.postgres.administrator_login_password
     DB_PORT     = "5432"
   }
   depends_on = [kubernetes_namespace.sherpany]
