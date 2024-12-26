@@ -32,6 +32,15 @@ data "azurerm_log_analytics_workspace" "aks-law" {
   resource_group_name = data.azurerm_resource_group.sherpany_resources.name
 }
 
+data "azurerm_resource_group" "vm_rg" {
+  name = "sherpany-vm-rg"
+}
+
+data "azurerm_public_ip" "vm_pip" {
+  name                = "ubuntu-pip"
+  resource_group_name = data.azurerm_resource_group.vm_rg.name
+}
+
 # Azure Database for PostgreSQL
 resource "azurerm_postgresql_server" "postgres" {
   name                = "sherpany-psql"
@@ -288,7 +297,7 @@ resource "helm_release" "prometheus" {
         additionalScrapeConfigs:
           - job_name: 'vm-node-exporter'
             static_configs:
-              - targets: ['${data.azurerm_public_ip.pip.ip_address}:9100']
+              - targets: ['${data.azurerm_public_ip.vm_pip.ip_address}:9100']
             metrics_path: '/metrics'
             scheme: 'http'
     EOT
@@ -335,11 +344,6 @@ resource "kubernetes_manifest" "flask_service_monitor" {
     }
   }
   depends_on = [helm_release.prometheus]
-}
-
-data "azurerm_public_ip" "pip" {
-  name                = "data.azurerm_public_ip.pip.name"
-  resource_group_name = data.azurerm_resource_group.sherpany_resources.name
 }
 
 resource "helm_release" "grafana" {
