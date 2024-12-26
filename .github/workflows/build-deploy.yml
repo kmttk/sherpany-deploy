@@ -84,16 +84,31 @@ jobs:
             --account-name sherpanyterraformstate \
             --query [0].value -o tsv)
           echo "ARM_ACCESS_KEY=$STORAGE_KEY" >> $GITHUB_ENV
-      
+
       - name: Install kubectl
         uses: azure/setup-kubectl@v3
-      
+
       - name: Get AKS Credentials
         run: |
           az aks get-credentials \
             --resource-group sherpany-resources \
             --name sherpany-aks \
             --overwrite-existing
+
+      - name: Install Helm
+        run: |
+          curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
+
+      - name: Add Prometheus Helm Repo
+        run: |
+          helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+          helm repo update
+          
+      - name: Install Prometheus Operator CRDs
+        run: |
+          helm install prometheus-operator-crds prometheus-community/prometheus-operator-crds \
+            --namespace monitoring \
+            --create-namespace
       
       - name: Login to ACR
         run: az acr login --name ${{ secrets.ACR_NAME }}

@@ -281,17 +281,10 @@ resource "kubernetes_namespace" "monitoring" {
   depends_on = [data.azurerm_kubernetes_cluster.sherpany_aks]
   }
 
-resource "helm_release" "prometheus_operator_crds" {
-  name       = "prometheus-operator-crds"
-  repository = "https://prometheus-community.github.io/helm-charts"
-  chart      = "prometheus-operator-crds"
-  namespace  = kubernetes_namespace.monitoring.metadata[0].name
-}
-
 resource "helm_release" "prometheus" {
   name       = "prometheus"
   repository = "https://prometheus-community.github.io/helm-charts"
-  chart      = "kube-prometheus-stack"
+  chart      = "prometheus"
   namespace  = kubernetes_namespace.monitoring.metadata[0].name
   version    = "25.8.0"
 
@@ -310,7 +303,17 @@ resource "helm_release" "prometheus" {
     EOT
   ]
 
-  depends_on = [helm_release.prometheus_operator_crds]
+  set {
+    name  = "server.persistentVolume.size"
+    value = "10Gi"
+  }
+
+  set {
+    name  = "server.service.type"
+    value = "ClusterIP"
+  }
+
+  depends_on = [kubernetes_namespace.monitoring]
 }
 
 resource "kubernetes_manifest" "flask_service_monitor" {
