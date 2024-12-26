@@ -80,7 +80,7 @@ resource "null_resource" "db_setup" {
       PGPASSWORD=${azurerm_postgresql_server.postgres.administrator_login_password} psql \
       -h ${azurerm_postgresql_server.postgres.fqdn} \
       -p 5432 \
-      -U ${azurerm_postgresql_server.postgres.administrator_login}@${data.azurerm_postgresql_server.postgres.name} \
+      -U ${azurerm_postgresql_server.postgres.administrator_login}@${azurerm_postgresql_server.postgres.name} \
       -d ${azurerm_postgresql_database.db.name} \
       -f ${path.module}/../../source/init.sql
     EOT
