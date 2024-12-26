@@ -33,21 +33,26 @@ data "azurerm_postgresql_database" "db" {
   server_name         = data.azurerm_postgresql_server.postgres.name
 }
 
+# AKS Cluster data source
+data "azurerm_kubernetes_cluster" "sherpany_aks" {
+  name                = "sherpany-aks"
+  resource_group_name = data.azurerm_resource_group.sherpany_resources.name
+}
+
 # Log Analytics Workspace
 data "azurerm_log_analytics_workspace" "aks-law" {
   name                = "sherpany-law"
   resource_group_name = data.azurerm_resource_group.sherpany_resources.name
 }
 
-# PostgreSQL Firewall Rule for AKS
+# Update PostgreSQL Firewall Rule
 resource "azurerm_postgresql_firewall_rule" "aks" {
-  name                = "aks-nodes"
+  name                = "aks"
   resource_group_name = data.azurerm_resource_group.sherpany_resources.name
   server_name         = data.azurerm_postgresql_server.postgres.name
-  start_ip_address    = data.azurerm_kubernetes_cluster.aks.network_profile[0].service_cidr
-  end_ip_address      = data.azurerm_kubernetes_cluster.aks.network_profile[0].service_cidr
+  start_ip_address    = data.azurerm_kubernetes_cluster.sherpany_aks.network_profile[0].service_cidr
+  end_ip_address      = data.azurerm_kubernetes_cluster.sherpany_aks.network_profile[0].service_cidr
 }
-
 # Initialize Database Schema
 resource "null_resource" "db_setup" {
   provisioner "local-exec" {
