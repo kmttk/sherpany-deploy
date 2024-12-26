@@ -12,7 +12,7 @@ data "azurerm_kubernetes_cluster" "sherpany_aks" {
 }
 
 data "azurerm_public_ip" "vm_pip" {
-  name                = "sherpany-ip"
+  name                = "ubuntu-pip"
   resource_group_name = data.azurerm_resource_group.vm_rg.name
 }
 
