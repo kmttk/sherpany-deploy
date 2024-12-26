@@ -112,10 +112,9 @@ resource "azurerm_kubernetes_cluster" "sherpany_aks" {
 resource "kubernetes_namespace" "monitoring" {
   metadata {
     name = "monitoring"
-    
   }
   depends_on = [azurerm_kubernetes_cluster.sherpany_aks]
-  }
+}
 
 resource "helm_release" "prometheus_operator_crds" {
   name       = "prometheus-operator-crds"

@@ -1,10 +1,41 @@
-name: Deploy or B & Deploy
+name: Full Deployment
 on:
   workflow_dispatch:
 
 jobs:
+  deploy-phase0:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: ./terraform-project/phase-zero
+    env:
+      TF_VAR_azure_client_id: ${{ secrets.AZURE_CLIENT_ID }}
+      TF_VAR_azure_client_secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+      TF_VAR_azure_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      TF_VAR_azure_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+      TF_VAR_azure_linux_vm_secret: ${{ secrets.AZURE_LIN_VM_SECRET }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.10.3
+      - name: Terraform Init Phase 3
+        run: terraform init
+      - name: Terraform Plan Phase 3
+        run: terraform plan -out=phase3.tfplan
+      - name: Terraform Apply Phase 3
+        if: github.ref == 'refs/heads/main'
+        run: terraform apply -auto-approve phase3.tfplan
+
   deploy-phase1:
     runs-on: ubuntu-latest
+    needs: [deploy-phase0]
     timeout-minutes: 10
     defaults:
       run:
@@ -32,8 +63,50 @@ jobs:
         if: github.ref == 'refs/heads/main'
         run: terraform apply -auto-approve phase1.tfplan
 
-  build:
+  deploy-phase1-and-half:
     needs: [deploy-phase1]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: ./terraform-project/phase-one-and-half
+    env:
+      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      TF_VAR_azure_client_id: ${{ secrets.AZURE_CLIENT_ID }}
+      TF_VAR_azure_client_secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+      TF_VAR_azure_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      TF_VAR_azure_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Get AKS Credentials
+        run: |
+          az aks get-credentials \
+            --resource-group sherpany-resources \
+            --name sherpany-aks \
+            --overwrite-existing
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.10.3
+      - name: Terraform Init Phase 1.5
+        run: terraform init
+      - name: Terraform Plan Phase 1.5
+        run: terraform plan -out=phase1-5.tfplan
+      - name: Terraform Apply Phase 1.5
+        if: github.ref == 'refs/heads/main'
+        run: terraform apply -auto-approve phase1-5.tfplan
+
+  build:
+    needs: [deploy-phase1-and-half]
     timeout-minutes: 10
     runs-on: ubuntu-latest
     steps:
@@ -53,7 +126,7 @@ jobs:
           docker push ${IMAGE_TAG}:latest
 
   deploy-phase2:
-    needs: [build, deploy-phase1]
+    needs: [build]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     defaults:
@@ -70,12 +143,10 @@ jobs:
       TF_VAR_azure_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
     steps:
       - uses: actions/checkout@v3
-      
       - name: Azure Login
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
-      
       - name: Get Storage Account Key
         id: get-storage-key
         run: |
@@ -84,25 +155,20 @@ jobs:
             --account-name sherpanyterraformstate \
             --query [0].value -o tsv)
           echo "ARM_ACCESS_KEY=$STORAGE_KEY" >> $GITHUB_ENV
-      
-      - name: Install kubectl
-        uses: azure/setup-kubectl@v3
-      
       - name: Get AKS Credentials
         run: |
           az aks get-credentials \
             --resource-group sherpany-resources \
             --name sherpany-aks \
             --overwrite-existing
-
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
       - name: Login to ACR
         run: az acr login --name ${{ secrets.ACR_NAME }}
-      
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.10.3
-      
       - name: Terraform Init
         run: |
           terraform init \
@@ -110,19 +176,8 @@ jobs:
             -backend-config="storage_account_name=sherpanyterraformstate" \
             -backend-config="container_name=tfstate" \
             -backend-config="key=terraform.tfstate"
-      
-      - name: Terraform Plan Phase 1
+      - name: Terraform Plan Phase 2
         run: terraform plan -out=phase2.tfplan
-
-      - name: Terraform Apply Phase 1
+      - name: Terraform Apply Phase 2
         if: github.ref == 'refs/heads/main'
         run: terraform apply -auto-approve phase2.tfplan
-
-      - name: Get Grafana URL
-        if: github.ref == 'refs/heads/main'
-        run: |
-          echo "Waiting for LoadBalancer IP..."
-          sleep 30
-          GRAFANA_IP=$(kubectl get svc grafana -n monitoring -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-          echo "Grafana is available at: http://${GRAFANA_IP}:3000"
-          echo "Default credentials: admin / admin321"
