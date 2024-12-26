@@ -117,3 +117,12 @@ jobs:
       - name: Terraform Apply Phase 1
         if: github.ref == 'refs/heads/main'
         run: terraform apply -auto-approve phase2.tfplan
+
+      - name: Get Grafana URL
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "Waiting for LoadBalancer IP..."
+          sleep 30
+          GRAFANA_IP=$(kubectl get svc grafana -n monitoring -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+          echo "Grafana is available at: http://${GRAFANA_IP}:3000"
+          echo "Default credentials: admin / admin321"
