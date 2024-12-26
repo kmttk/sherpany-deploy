@@ -2,6 +2,10 @@ data "azurerm_resource_group" "sherpany_resources" {
   name = "sherpany-resources"
 }
 
+data "azurerm_resource_group" "vm_rg" {
+  name = "sherpany-vm-rg"
+}
+
 data "azurerm_kubernetes_cluster" "sherpany_aks" {
   name                = "sherpany-aks"
   resource_group_name = data.azurerm_resource_group.sherpany_resources.name
