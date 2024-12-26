@@ -193,16 +193,8 @@ resource "helm_release" "grafana" {
   depends_on = [helm_release.prometheus, helm_release.prometheus_operator_crds]
 }
 
-data "kubernetes_service" "grafana" {
-  metadata {
-    name      = "grafana"
-    namespace = data.kubernetes_namespace.monitoring.metadata[0].name
-  }
-  depends_on = [helm_release.grafana]
-}
-
 output "grafana_url" {
-  value       = "http://${data.kubernetes_service.grafana.status[0].load_balancer[0].ingress[0].ip}:3000"
+  value       = "http://${kubernetes_service.grafana.status[0].load_balancer[0].ingress[0].ip}:3000"
   description = "URL to access Grafana dashboard"
   depends_on  = [helm_release.grafana]
 }
