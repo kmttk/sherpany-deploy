@@ -45,9 +45,8 @@ data "azurerm_log_analytics_workspace" "aks-law" {
   resource_group_name = data.azurerm_resource_group.sherpany_resources.name
 }
 
-# Update PostgreSQL Firewall Rule
-resource "azurerm_postgresql_firewall_rule" "aks" {
-  name                = "aks"
+resource "azurerm_postgresql_firewall_rule" "aks_firewall_rule" {
+  name                = "aks_firewall_rule"
   resource_group_name = data.azurerm_resource_group.sherpany_resources.name
   server_name         = data.azurerm_postgresql_server.postgres.name
   start_ip_address    = data.azurerm_kubernetes_cluster.sherpany_aks.network_profile[0].service_cidr
@@ -57,18 +56,18 @@ resource "azurerm_postgresql_firewall_rule" "aks" {
 resource "null_resource" "db_setup" {
   provisioner "local-exec" {
     command = <<-EOT
-      PGPASSWORD=${azurerm_postgresql_server.postgres.administrator_login_password} psql \
-      -h ${azurerm_postgresql_server.postgres.fqdn} \
+      PGPASSWORD=${data.azurerm_postgresql_server.postgres.administrator_login_password} psql \
+      -h ${data.azurerm_postgresql_server.postgres.fqdn} \
       -p 5432 \
-      -U ${azurerm_postgresql_server.postgres.administrator_login}@${azurerm_postgresql_server.postgres.name} \
-      -d ${azurerm_postgresql_database.db.name} \
+      -U ${data.azurerm_postgresql_server.postgres.administrator_login}@${data.azurerm_postgresql_server.postgres.name} \
+      -d ${data.azurerm_postgresql_database.db.name} \
       -f ${path.module}/../../source/init.sql
     EOT
   }
-  
+
   depends_on = [
-    azurerm_postgresql_database.db,
-    azurerm_postgresql_firewall_rule.aks
+    data.azurerm_postgresql_database.db,
+    azurerm_postgresql_firewall_rule.aks_firewall_rule
   ]
 }
 
@@ -79,7 +78,7 @@ resource "azurerm_log_analytics_solution" "container_insights" {
   location             = data.azurerm_resource_group.sherpany_resources.location
   resource_group_name  = data.azurerm_resource_group.sherpany_resources.name
   workspace_resource_id = data.azurerm_log_analytics_workspace.aks-law.id
-  workspace_name       = data.azurerm_log_analytics_workspace.aks.name
+  workspace_name       = data.azurerm_log_analytics_workspace.aks-law.name
 
   plan {
     publisher = "Microsoft"
@@ -91,7 +90,7 @@ resource "azurerm_log_analytics_solution" "container_insights" {
 # AKS Diagnostic Settings
 resource "azurerm_monitor_diagnostic_setting" "aks" {
   name                       = "aks-diagnostics"
-  target_resource_id        = data.azurerm_kubernetes_cluster.aks.id
+  target_resource_id        = data.azurerm_kubernetes_cluster.sherpany_aks.id
   log_analytics_workspace_id = data.azurerm_log_analytics_workspace.aks-law.id
 
   enabled_log {
