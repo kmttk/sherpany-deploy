@@ -74,7 +74,7 @@ locals {
 resource "azurerm_postgresql_firewall_rule" "aks_firewall_rule" {
   name                = "aks_firewall_rule"
   resource_group_name = data.azurerm_resource_group.sherpany_resources.name
-  server_name         = data.azurerm_postgresql_server.postgres.name
+  server_name         = "sherpany-psql"
   start_ip_address    = local.start_ip
   end_ip_address      = local.end_ip
 }
@@ -288,7 +288,7 @@ resource "helm_release" "prometheus" {
         additionalScrapeConfigs:
           - job_name: 'vm-node-exporter'
             static_configs:
-              - targets: ['${data.azurerm_public_ip.sherpany_vm_ip.ip_address}:9100']
+              - targets: ['${data.azurerm_public_ip.pip.ip_address}:9100']
             metrics_path: '/metrics'
             scheme: 'http'
     EOT
