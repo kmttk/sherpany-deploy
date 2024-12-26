@@ -313,3 +313,34 @@ data "azurerm_public_ip" "sherpany_vm_ip" {
   name                = "sherpany-ip"
   resource_group_name = data.azurerm_resource_group.sherpany_resources.name
 }
+
+resource "helm_release" "grafana" {
+  name       = "grafana"
+  repository = "https://grafana.github.io/helm-charts"
+  chart      = "grafana"
+  namespace  = kubernetes_namespace.monitoring.metadata[0].name
+  version    = "6.52.0"
+
+  set {
+    name  = "service.type"
+    value = "LoadBalancer"
+  }
+
+  set {
+    name  = "grafana.ini.datasources"
+    value = <<-EOT
+      [datasources]
+      [[datasource]]
+      name      = "Prometheus"
+      type      = "prometheus"
+      url       = "http://prometheus-server.monitoring.svc.cluster.local"
+      access    = "proxy"
+      isDefault = true
+    EOT
+  }
+
+  depends_on = [
+    helm_release.prometheus,
+    kubernetes_namespace.monitoring
+  ]
+}
