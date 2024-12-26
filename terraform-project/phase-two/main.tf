@@ -65,14 +65,20 @@ resource "azurerm_postgresql_database" "db" {
 }
 
 
+locals {
+  service_cidr = data.azurerm_kubernetes_cluster.sherpany_aks.network_profile[0].service_cidr
+  start_ip     = cidrhost(local.service_cidr, 0)
+  end_ip       = cidrhost(local.service_cidr, pow(2, (32 - tonumber(split("/", local.service_cidr)[1]))) - 1)
+}
+
 resource "azurerm_postgresql_firewall_rule" "aks_firewall_rule" {
   name                = "aks_firewall_rule"
   resource_group_name = data.azurerm_resource_group.sherpany_resources.name
-  server_name         = azurerm_postgresql_server.postgres.name
-  start_ip_address    = data.azurerm_kubernetes_cluster.sherpany_aks.network_profile[0].service_cidr
-  end_ip_address      = data.azurerm_kubernetes_cluster.sherpany_aks.network_profile[0].service_cidr
-  depends_on          = [ azurerm_postgresql_database.db ]
+  server_name         = data.azurerm_postgresql_server.postgres.name
+  start_ip_address    = local.start_ip
+  end_ip_address      = local.end_ip
 }
+
 # Initialize Database Schema
 resource "null_resource" "db_setup" {
   provisioner "local-exec" {
@@ -331,8 +337,8 @@ resource "kubernetes_manifest" "flask_service_monitor" {
   depends_on = [helm_release.prometheus]
 }
 
-data "azurerm_public_ip" "sherpany_vm_ip" {
-  name                = "sherpany-ip"
+data "azurerm_public_ip" "pip" {
+  name                = "data.azurerm_public_ip.pip.name"
   resource_group_name = data.azurerm_resource_group.sherpany_resources.name
 }
 
