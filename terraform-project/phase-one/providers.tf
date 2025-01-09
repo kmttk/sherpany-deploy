@@ -21,8 +21,3 @@ provider "helm" {
     cluster_ca_certificate = base64decode(azurerm_kubernetes_cluster.sherpany_aks.kube_config[0].cluster_ca_certificate)
   }
 }
-
-provider "github" {
-  token = var.github_token
-  owner = var.github_owner
-}
