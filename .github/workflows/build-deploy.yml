@@ -161,6 +161,9 @@ jobs:
       TF_VAR_azure_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
       ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
       ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
+      TF_VAR_acr_username: ${{ secrets.ACR_USERNAME }}
+      TF_VAR_acr_password: ${{ secrets.ACR_PASSWORD }}
+
     steps:
       - uses: actions/checkout@v3
       - name: Azure Login
