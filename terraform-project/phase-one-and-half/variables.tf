@@ -28,7 +28,7 @@ variable "acr_password" {
   sensitive   = true
 }
 
-variable "github_tokens" {
+variable "github_token" {
   type        = string
   sensitive   = true
 }
