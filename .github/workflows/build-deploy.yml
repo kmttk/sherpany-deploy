@@ -45,8 +45,6 @@ jobs:
       TF_VAR_azure_client_secret: ${{ secrets.AZURE_CLIENT_SECRET }}
       TF_VAR_azure_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       TF_VAR_azure_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
-      TF_VAR_github_token: ${{ secrets.TOKEN_GH }}
-      TF_VAR_github_owner: ${{ secrets.OWNER_GH }}
     steps:
       - uses: actions/checkout@v3
       - name: Azure Login
@@ -72,6 +70,7 @@ jobs:
           echo "ACR_PASSWORD=${ACR_PASSWORD}" >> $GITHUB_ENV
       - name: Set GitHub secrets
         run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
           gh secret set ACR_USERNAME --body "$ACR_USERNAME"
           gh secret set ACR_PASSWORD --body "$ACR_PASSWORD"
         env:
