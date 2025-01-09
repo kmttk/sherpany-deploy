@@ -207,6 +207,10 @@ jobs:
             -backend-config="storage_account_name=sherpanyterraformstate" \
             -backend-config="container_name=tfstate" \
             -backend-config="key=terraform.tfstate"
+      - name: Import Log Analytics Solution
+        run: terraform import azurerm_log_analytics_solution.container_insights /subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/sherpany-resources/providers/Microsoft.OperationsManagement/solutions/ContainerInsights(sherpany-law)
+      - name: Import AKS Diagnostic Settings
+        run: terraform import azurerm_monitor_diagnostic_setting.aks /subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/sherpany-resources/providers/Microsoft.ContainerService/managedClusters/sherpany-aks|aks-diagnostics
       - name: Terraform Plan Phase 2
         run: terraform plan -out=phase2.tfplan
       - name: Terraform Apply Phase 2

@@ -61,7 +61,7 @@ resource "azurerm_postgresql_database" "db" {
   server_name         = azurerm_postgresql_server.postgres.name
   charset             = "UTF8"
   collation           = "English_United States.1252"
-  depends_on          = [ azurerm_postgresql_server.postgres ]
+  depends_on          = [ azurerm_postgresql_database.db ]
 }
 
 
@@ -77,6 +77,7 @@ resource "azurerm_postgresql_firewall_rule" "aks_firewall_rule" {
   server_name         = "sherpany-psql"
   start_ip_address    = local.start_ip
   end_ip_address      = local.end_ip
+  depends_on = [ azurerm_postgresql_server.postgres ]
 }
 
 # Initialize Database Schema
