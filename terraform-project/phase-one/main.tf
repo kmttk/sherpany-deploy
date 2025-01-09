@@ -54,14 +54,14 @@ resource "azurerm_container_registry" "sherpany_acr" {
 resource "github_actions_secret" "acr_username" {
   repository      = var.github_repository
   secret_name     = "ACR_USERNAME"
-  plaintext_value = data.azurerm_container_registry.sherpany_acr.admin_username
+  plaintext_value = azurerm_container_registry.sherpany_acr.admin_username
   depends_on = [azurerm_container_registry.sherpany_acr]
 }
 
 resource "github_actions_secret" "acr_password" {
   repository      = var.github_repository
   secret_name     = "ACR_PASSWORD"
-  plaintext_value = data.azurerm_container_registry.sherpany_acr.admin_password
+  plaintext_value = azurerm_container_registry.sherpany_acr.admin_password
   depends_on = [azurerm_container_registry.sherpany_acr]
 }
 
