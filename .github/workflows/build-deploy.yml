@@ -96,8 +96,8 @@ jobs:
           echo "ACR_PASSWORD=${ACR_PASSWORD}" >> $GITHUB_ENV
       - name: Set GitHub secrets
         run: |
-          gh secret set ACR_USERNAME --body "$ACR_USERNAME" --repo kmttk/herpany-deploy
-          gh secret set ACR_PASSWORD --body "$ACR_PASSWORD" --repo kmttk/sherpny-deploy
+          gh secret set ACR_USERNAME --body "$ACR_USERNAME" --repo kmttk/sherpany-deploy
+          gh secret set ACR_PASSWORD --body "$ACR_PASSWORD" --repo kmttk/sherapny-deploy
         env:
           GH_TOKEN: ${{ github.token }}
       - name: Get AKS Credentials
