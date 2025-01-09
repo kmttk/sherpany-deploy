@@ -22,3 +22,4 @@ variable "azure_linux_vm_secret" {
   type      = string
   sensitive = true
 }
+
