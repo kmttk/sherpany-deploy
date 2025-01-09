@@ -178,9 +178,9 @@ resource "kubernetes_secret" "acr_auth" {
   data = {
     ".dockerconfigjson" = base64encode(jsonencode({
       auths = {
-        "${azurerm_container_registry.sherpany_acr.login_server}" = {
-          variable "acr_username" {}
-          variable "acr_password" {}
+        "${data.azurerm_container_registry.sherpany_acr.login_server}" = {
+          username = var.acr_username
+          password = var.acr_password
           email    = "kurzynski.mateusz@protonmail.com"
         }
       }
