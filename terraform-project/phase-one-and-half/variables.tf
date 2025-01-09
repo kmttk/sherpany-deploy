@@ -18,11 +18,21 @@ variable "azure_tenant_id" {
   sensitive   = true
 }
 
-variable "github_token" {
+variable "acr_username" {
+  type        = string
+  sensitive   = true
+}
+
+variable "acr_password" {
+  type        = string
+  sensitive   = true
+}
+
+variable "github_tokens" {
   type        = string
   sensitive   = true
 }
 
 variable "github_owner" {
-  type        = string
+  type = string
 }
