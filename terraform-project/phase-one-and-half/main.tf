@@ -23,7 +23,6 @@ resource "kubernetes_namespace" "monitoring" {
   depends_on = [data.azurerm_kubernetes_cluster.sherpany_aks]
 }
 
-
 resource "helm_release" "prometheus_operator_crds" {
   name       = "prometheus-operator-crds"
   repository = "https://prometheus-community.github.io/helm-charts"

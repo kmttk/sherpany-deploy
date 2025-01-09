@@ -51,20 +51,6 @@ resource "azurerm_container_registry" "sherpany_acr" {
   depends_on         = [azurerm_resource_group.sherpany_resources]
 }
 
-resource "github_actions_secret" "acr_username" {
-  repository      = "sherpany-deploy"
-  secret_name     = "ACR_USERNAME"
-  plaintext_value = azurerm_container_registry.sherpany_acr.admin_username
-  depends_on = [azurerm_container_registry.sherpany_acr]
-}
-
-resource "github_actions_secret" "acr_password" {
-  repository      = "sherpany-deploy"
-  secret_name     = "ACR_PASSWORD"
-  plaintext_value = azurerm_container_registry.sherpany_acr.admin_password
-  depends_on = [azurerm_container_registry.sherpany_acr]
-}
-
 # Log Analytics Workspace
 resource "azurerm_log_analytics_workspace" "aks-law" {
   name                = "sherpany-law"
