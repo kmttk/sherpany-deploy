@@ -181,7 +181,9 @@ resource "kubernetes_secret" "acr_auth" {
     ".dockerconfigjson" = jsonencode({
       "auths" = {
         "${data.azurerm_container_registry.sherpany_acr.login_server}" = {
-          "auth" = base64encode("${var.acr_username}:${var.acr_password}")
+          "username" = var.acr_username
+          "password" = var.acr_password
+          "auth"     = base64encode("${var.acr_username}:${var.acr_password}")
         }
       }
     })
@@ -239,12 +241,12 @@ resource "kubernetes_deployment" "flask_app" {
 
             resources {
             limits = {
-              cpu    = "1000m"    
-              memory = "1024Mi"   
+              cpu    = "500m"    
+              memory = "512Mi"   
             }
             requests = {
-              cpu    = "500m"     
-              memory = "512Mi"
+              cpu    = "250m"     
+              memory = "256Mi"
             }
           }
         }
@@ -279,7 +281,11 @@ resource "kubernetes_service" "flask_service" {
 
     type = "LoadBalancer"
   }
-  depends_on = [kubernetes_service.flask_service]
+    depends_on = [
+    kubernetes_secret.acr_auth,
+    kubernetes_secret.postgres_secret,
+    kubernetes_namespace.sherpany
+  ]
 }
 
 // Service Monitor for Flask App

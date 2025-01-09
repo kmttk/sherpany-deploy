@@ -164,7 +164,7 @@ jobs:
       TF_VAR_acr_username: ${{ secrets.ACR_USERNAME }}
       TF_VAR_acr_password: ${{ secrets.ACR_PASSWORD }}
 
-    steps:
+steps:
       - uses: actions/checkout@v3
       - name: Azure Login
         uses: azure/login@v1
@@ -184,10 +184,19 @@ jobs:
             --resource-group sherpany-resources \
             --name sherpany-aks \
             --overwrite-existing
+          echo "KUBECONFIG=$HOME/.kube/config" >> $GITHUB_ENV
       - name: Install kubectl
         uses: azure/setup-kubectl@v3
+      - name: Login to AKS
+        uses: azure/k8s-set-context@v3
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ env.KUBECONFIG }}
       - name: Login to ACR
         run: az acr login --name ${{ secrets.ACR_NAME }}
+      - name: Attach ACR to AKS
+        run: |
+          az aks update -n sherpany-aks -g sherpany-resources --attach-acr sherpanyacr
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
