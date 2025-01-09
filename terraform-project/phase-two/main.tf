@@ -181,7 +181,7 @@ resource "kubernetes_secret" "acr_auth" {
         "${azurerm_container_registry.sherpany_acr.login_server}" = {
           username = var.acr_username
           password = var.acr_password
-          email    = "your-email@example.com"
+          email    = "kurzynski.mateusz@protonmail.com"
         }
       }
     }))
