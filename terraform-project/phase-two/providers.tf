@@ -21,7 +21,7 @@ provider "helm" {
   }
 }
 
-provider "github" {
+provider "integrations/github" {
   token = var.github_token
   owner = var.github_owner
 }
