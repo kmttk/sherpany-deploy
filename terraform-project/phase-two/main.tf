@@ -311,7 +311,6 @@ resource "kubernetes_manifest" "flask_service_monitor" {
     depends_on = [
     kubernetes_deployment.flask_app,
     kubernetes_service.flask_service,
-    kubernetes_namespace.monitoring,
     helm_release.prometheus_operator_crds
   ]
 }
