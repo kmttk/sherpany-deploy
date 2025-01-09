@@ -5,7 +5,7 @@ import os
 import time
 
 app = Flask(__name__)
-
+# test
 # Prometheus metrics
 http_requests_total = Counter('http_requests_total', 'Total HTTP requests')
 http_request_duration = Histogram('http_request_duration_seconds', 'HTTP request duration')
