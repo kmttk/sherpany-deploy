@@ -237,14 +237,14 @@ resource "kubernetes_deployment" "flask_app" {
             }
           }
 
-          resources {
+            resources {
             limits = {
-              cpu    = "500m"
-              memory = "512Mi"
+              cpu    = "1000m"    
+              memory = "1024Mi"   
             }
             requests = {
-              cpu    = "250m"
-              memory = "256Mi"
+              cpu    = "500m"     
+              memory = "512Mi"
             }
           }
         }
@@ -308,4 +308,10 @@ resource "kubernetes_manifest" "flask_service_monitor" {
       ]
     }
   }
+    depends_on = [
+    kubernetes_deployment.flask_app,
+    kubernetes_service.flask_service,
+    kubernetes_namespace.monitoring,
+    helm_release.prometheus_operator_crds
+  ]
 }
