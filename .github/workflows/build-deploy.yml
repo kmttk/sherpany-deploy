@@ -83,8 +83,8 @@ jobs:
       TF_VAR_github_token: ${{ secrets.TOKEN_GH }}
       TF_VAR_github_owner: ${{ secrets.OWNER_GH }}
       GH_TOKEN: ${{ secrets.TOKEN_GH }}
-      TF_VAR_acr_username: ${{ env.ACR_USERNAME }}
-      TF_VAR_acr_password: ${{ env.ACR_PASSWORD }}
+      TF_VAR_acr_username: $ACR_USERNAME
+      TF_VAR_acr_password: $ACR_PASSWORD
 
     steps:
       - uses: actions/checkout@v3
