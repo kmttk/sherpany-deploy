@@ -175,19 +175,19 @@ resource "kubernetes_secret" "acr_auth" {
     namespace = "sherpany"
   }
 
+  type = "kubernetes.io/dockerconfigjson"
+
   data = {
-    ".dockerconfigjson" = base64encode(jsonencode({
-      auths = {
+    ".dockerconfigjson" = jsonencode({
+      "auths" = {
         "${data.azurerm_container_registry.sherpany_acr.login_server}" = {
-          username = var.acr_username
-          password = var.acr_password
-          email    = "kurzynski.mateusz@protonmail.com"
+          "auth" = base64encode("${var.acr_username}:${var.acr_password}")
         }
       }
-    }))
+    })
   }
 
-  type = "kubernetes.io/dockerconfigjson"
+  depends_on = [kubernetes_namespace.sherpany]
 }
 
 // Flask App Deployment
@@ -251,6 +251,11 @@ resource "kubernetes_deployment" "flask_app" {
       }
     }
   }
+    depends_on = [
+    kubernetes_secret.acr_auth,
+    kubernetes_secret.postgres_secret,
+    kubernetes_namespace.sherpany
+  ]
 }
 // Flask App Service
 resource "kubernetes_service" "flask_service" {
