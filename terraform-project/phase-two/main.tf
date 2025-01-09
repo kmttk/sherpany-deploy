@@ -245,8 +245,8 @@ resource "kubernetes_deployment" "flask_app" {
               memory = "512Mi"   
             }
             requests = {
-              cpu    = "250m"     
-              memory = "256Mi"
+              cpu    = "125m"     
+              memory = "128Mi"
             }
           }
         }
