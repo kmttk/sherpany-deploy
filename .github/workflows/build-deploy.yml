@@ -83,6 +83,11 @@ jobs:
       TF_VAR_github_owner: ${{ secrets.OWNER_GH }}
 
     steps:
+      - uses: actions/checkout@v3
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
       - name: Get ACR credentials
         run: |
           ACR_USERNAME=$(az acr credential show --name sherpanyacr --query "username" --output tsv)
@@ -96,11 +101,6 @@ jobs:
           gh secret set ACR_PASSWORD --body "$ACR_PASSWORD"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - uses: actions/checkout@v3
-      - name: Azure Login
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
       - name: Get AKS Credentials
         run: |
           az aks get-credentials \
