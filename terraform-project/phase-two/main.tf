@@ -219,21 +219,38 @@ resource "kubernetes_deployment" "flask_app" {
         }
       }
       spec {
-        image_pull_secrets = [{
-          name = kubernetes_secret.acr_auth.metadata[0].name
-        }]
-        containers {
+        image_pull_secrets {
+          name = "acr-auth"
+        }
+        container {
           name  = "flask-app"
-          image = "${azurerm_container_registry.sherpany_acr.login_server}/flask-app:latest"
-          ports {
+          image = "${data.azurerm_container_registry.sherpany_acr.login_server}/flask-app:latest"
+          
+          port {
             container_port = 5000
+          }
+
+          env_from {
+            secret_ref {
+              name = "postgres-secret"
+            }
+          }
+
+          resources {
+            limits = {
+              cpu    = "500m"
+              memory = "512Mi"
+            }
+            requests = {
+              cpu    = "250m"
+              memory = "256Mi"
+            }
           }
         }
       }
     }
   }
 }
-
 // Flask App Service
 resource "kubernetes_service" "flask_service" {
   metadata {
@@ -246,7 +263,10 @@ resource "kubernetes_service" "flask_service" {
       app = "flask-app"
     }
 
+  
+
     port {
+      name        = "http"  
       port        = 80
       target_port = 5000
     }
