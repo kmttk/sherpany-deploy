@@ -163,8 +163,7 @@ jobs:
       ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
       TF_VAR_acr_username: ${{ secrets.ACR_USERNAME }}
       TF_VAR_acr_password: ${{ secrets.ACR_PASSWORD }}
-
-steps:
+    steps:
       - uses: actions/checkout@v3
       - name: Azure Login
         uses: azure/login@v1
