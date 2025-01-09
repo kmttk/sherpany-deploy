@@ -18,6 +18,7 @@ variable "azure_tenant_id" {
   sensitive   = true
 }
 
+
 variable "acr_username" {
   description = "The username for the Azure Container Registry"
 }
