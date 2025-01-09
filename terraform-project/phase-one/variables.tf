@@ -18,11 +18,3 @@ variable "azure_tenant_id" {
   sensitive   = true
 }
 
-variable "github_token" {
-  type        = string
-  sensitive   = true
-}
-
-variable "github_owner" {
-  type        = string
-}

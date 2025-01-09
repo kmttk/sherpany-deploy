@@ -26,4 +26,3 @@ variable "acr_password" {
   description = "The password for the Azure Container Registry"
   sensitive   = true
 }
-
