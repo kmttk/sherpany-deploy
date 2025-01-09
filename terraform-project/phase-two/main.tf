@@ -169,7 +169,28 @@ resource "kubernetes_secret" "postgres_secret" {
   depends_on = [kubernetes_namespace.sherpany]
 }
 
-# Flask App Deployment
+resource "kubernetes_secret" "acr_auth" {
+  metadata {
+    name      = "acr-auth"
+    namespace = "sherpany"
+  }
+
+  data = {
+    ".dockerconfigjson" = base64encode(jsonencode({
+      auths = {
+        "${azurerm_container_registry.sherpany_acr.login_server}" = {
+          username = var.acr_username
+          password = var.acr_password
+          email    = "your-email@example.com"
+        }
+      }
+    }))
+  }
+
+  type = "kubernetes.io/dockerconfigjson"
+}
+
+// Flask App Deployment
 resource "kubernetes_deployment" "flask_app" {
   metadata {
     name      = "flask-app"
@@ -191,61 +212,32 @@ resource "kubernetes_deployment" "flask_app" {
         app = "flask-app"
       }
     }
-
     template {
       metadata {
         labels = {
           app = "flask-app"
         }
-        annotations = {
-          "prometheus.io/scrape" = "true"
-          "prometheus.io/port"   = "5000"
-          "prometheus.io/path"   = "/metrics"
-        }
       }
-
       spec {
-        container {
+        image_pull_secrets = [{
+          name = kubernetes_secret.acr_auth.metadata[0].name
+        }]
+        containers {
           name  = "flask-app"
-          image = "${data.azurerm_container_registry.sherpany_acr.login_server}/flask-app:latest"
-          
-          port {
+          image = "${azurerm_container_registry.sherpany_acr.login_server}/flask-app:latest"
+          ports {
             container_port = 5000
-          }
-
-          env_from {
-            secret_ref {
-              name = kubernetes_secret.postgres_secret.metadata[0].name
-            }
-          }
-
-          security_context {
-            run_as_user                = 1000
-            run_as_non_root           = true
-            allow_privilege_escalation = false
-          }
-
-          resources {
-            limits = {
-              cpu    = "500m"
-              memory = "256Mi"
-            }
-            requests = {
-              cpu    = "250m"
-              memory = "128Mi"
-            }
           }
         }
       }
     }
   }
-  depends_on = [kubernetes_secret.postgres_secret]
 }
 
-# Flask Service
+// Flask App Service
 resource "kubernetes_service" "flask_service" {
   metadata {
-    name      = "flask-service"
+    name      = "flask-app-service"
     namespace = "sherpany"
   }
 
@@ -264,6 +256,7 @@ resource "kubernetes_service" "flask_service" {
   depends_on = [kubernetes_secret.postgres_secret]
 }
 
+// Service Monitor for Flask App
 resource "kubernetes_manifest" "flask_service_monitor" {
   manifest = {
     apiVersion = "monitoring.coreos.com/v1"
@@ -283,14 +276,10 @@ resource "kubernetes_manifest" "flask_service_monitor" {
       }
       endpoints = [
         {
-          port        = "http"
-          path        = "/metrics"
-          interval    = "15s"
-          scrapeTimeout = "10s"
+          port = "http"
+          path = "/metrics"
         }
       ]
     }
   }
-  depends_on = [kubernetes_service.flask_service]
 }
-

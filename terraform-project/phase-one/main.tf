@@ -47,8 +47,28 @@ resource "azurerm_container_registry" "sherpany_acr" {
   resource_group_name = azurerm_resource_group.sherpany_resources.name
   location            = azurerm_resource_group.sherpany_resources.location
   sku                = "Basic"
-  admin_enabled      = false
+  admin_enabled      = true
   depends_on         = [azurerm_resource_group.sherpany_resources]
+}
+
+provider "github" {
+  token = var.github_token
+  owner = var.github_owner
+  depends_on = [azurerm_container_registry.sherpany_acr]
+}
+
+resource "github_actions_secret" "acr_username" {
+  repository      = var.github_repository
+  secret_name     = "ACR_USERNAME"
+  plaintext_value = data.azurerm_container_registry.sherpany_acr.admin_username
+  depends_on = [ provider.github ]
+}
+
+resource "github_actions_secret" "acr_password" {
+  repository      = var.github_repository
+  secret_name     = "ACR_PASSWORD"
+  plaintext_value = data.azurerm_container_registry.sherpany_acr.admin_password
+  depends_on = [ provider.github ]
 }
 
 # Log Analytics Workspace
