@@ -32,12 +32,6 @@ data "azurerm_log_analytics_workspace" "aks-law" {
   resource_group_name = data.azurerm_resource_group.sherpany_resources.name
 }
 
-data "azurerm_kubernetes_namespace" "monitoring" {
-  metadata {
-    name = "monitoring"
-  }
-}
-
 # Azure Database for PostgreSQL
 resource "azurerm_postgresql_server" "postgres" {
   name                = "sherpany-psql"
@@ -276,7 +270,7 @@ resource "kubernetes_manifest" "flask_service_monitor" {
     kind       = "ServiceMonitor"
     metadata = {
       name      = "flask-app-monitor"
-      namespace = data.kubernetes_namespace.monitoring.metadata[0].name
+      namespace = "monitoring"
       labels = {
         release = "prometheus"
       }
