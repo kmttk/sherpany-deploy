@@ -227,6 +227,7 @@ resource "kubernetes_deployment" "flask_app" {
           image = "${data.azurerm_container_registry.sherpany_acr.login_server}/flask-app:latest"
           
           port {
+            name           = "http"
             container_port = 5000
           }
 
@@ -273,7 +274,7 @@ resource "kubernetes_service" "flask_service" {
 
     type = "LoadBalancer"
   }
-  depends_on = [kubernetes_secret.postgres_secret]
+  depends_on = [kubernetes_service.flask_service]
 }
 
 // Service Monitor for Flask App
