@@ -1,3 +1,8 @@
+d# Add data source to get current IP
+data "http" "myip" {
+  url = "http://ipv4.icanhazip.com"
+}
+
 data "azurerm_resource_group" "sherpany_resources" {
   name = "sherpany-resources"
 }
@@ -89,21 +94,32 @@ resource "null_resource" "db_setup" {
       -p 5432 \
       -U ${azurerm_postgresql_server.postgres.administrator_login}@${azurerm_postgresql_server.postgres.name} \
       -d ${azurerm_postgresql_database.db.name} \
-      -f ${path.module}/../../source/init.sql
+      -f ${path.module}/../../source/init.sql \
+      --set=sslmode=require
     EOT
   }
 
   depends_on = [azurerm_postgresql_firewall_rule.aks_firewall_rule]
 }
 
+# Add firewall rule for GitHub Actions runner
+resource "azurerm_postgresql_firewall_rule" "github_actions" {
+  name                = "github-actions"
+  resource_group_name = data.azurerm_resource_group.sherpany_resources.name
+  server_name         = azurerm_postgresql_server.postgres.name
+  start_ip_address    = chomp(data.http.myip.response_body)
+  end_ip_address      = chomp(data.http.myip.response_body)
+}
+
+
 # Container Insights Solution
 # Container Insights Solution
 resource "azurerm_log_analytics_solution" "container_insights" {
   solution_name         = "ContainerInsights"
-  location             = data.azurerm_resource_group.sherpany_resources.location
-  resource_group_name  = data.azurerm_resource_group.sherpany_resources.name
+  location              = data.azurerm_resource_group.sherpany_resources.location
+  resource_group_name   = data.azurerm_resource_group.sherpany_resources.name
   workspace_resource_id = data.azurerm_log_analytics_workspace.aks-law.id
-  workspace_name       = data.azurerm_log_analytics_workspace.aks-law.name
+  workspace_name        = data.azurerm_log_analytics_workspace.aks-law.name
 
   plan {
     publisher = "Microsoft"
