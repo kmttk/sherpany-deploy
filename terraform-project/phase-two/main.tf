@@ -109,6 +109,7 @@ resource "azurerm_postgresql_firewall_rule" "github_actions" {
   server_name         = azurerm_postgresql_server.postgres.name
   start_ip_address    = chomp(data.http.myip.response_body)
   end_ip_address      = chomp(data.http.myip.response_body)
+  depends_on          = [ azurerm_postgresql_server.postgres ]
 }
 
 
