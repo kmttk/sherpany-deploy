@@ -1,4 +1,4 @@
-d# Add data source to get current IP
+# Add data source to get current IP
 data "http" "myip" {
   url = "http://ipv4.icanhazip.com"
 }
